@@ -1,0 +1,3 @@
+# Disable Cloudflare Pages auto-deployment
+# This project is deployed as Cloudflare Workers via wrangler
+

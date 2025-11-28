@@ -20,10 +20,23 @@ database_name = "tg-bot-db"
 database_id = "76e2bd8b-2e12-42d3-bec5-3f26112b2785"
 
 # 环境变量（非敏感信息）
-# 敏感信息应在 Cloudflare Dashboard 中设置为 Secret
+# 敏感信息（Token、密钥等）应在 Cloudflare Dashboard 中设置为 Secret
 [vars]
 NODE_ENV = "production"
 LOG_LEVEL = "info"
+
+# 应用配置（非敏感）
+WEBHOOK_URL = "https://amitgbot.undream.love"
+OFFICIAL_CHANNEL_ID = "@your_official_channel"
+
+# API 服务地址（非敏感，URL 本身不是密钥）
+IMAGE_GENERATION_API_URL = ""
+VIDEO_GENERATION_API_URL = ""
+
+# 支付回调 URL（非敏感）
+ALIPAY_NOTIFY_URL = "https://amitgbot.undream.love/api/notify/alipay"
+WECHAT_NOTIFY_URL = "https://amitgbot.undream.love/api/notify/wechat"
+USTD_NOTIFY_URL = "https://amitgbot.undream.love/api/notify/usdt"
 
 # 开发环境配置
 # 本地开发时的环境变量从 .dev.vars 文件读取

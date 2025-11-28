@@ -248,6 +248,125 @@ async function handleRequest(
       });
     }
     
+    // 设置 Webhook 端点（管理用）- 支持 GET 方式更简单
+    if (path === '/setup-webhook') {
+      // 添加 CORS 头
+      const headers = {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+      };
+      
+      // 处理 OPTIONS 请求
+      if (request.method === 'OPTIONS') {
+        return new Response(null, { status: 204, headers });
+      }
+      
+      if (!env.BOT_TOKEN) {
+        console.error('BOT_TOKEN 未配置');
+        return new Response(JSON.stringify({ 
+          success: false,
+          error: 'BOT_TOKEN not configured',
+          message: '请在 Cloudflare Dashboard 中配置 BOT_TOKEN 环境变量'
+        }), {
+          status: 500,
+          headers,
+        });
+      }
+      
+      const webhookUrl = env.WEBHOOK_URL || new URL(request.url).origin;
+      const fullWebhookUrl = `${webhookUrl}/tg/webhook`;
+      
+      console.log(`设置 Webhook 到: ${fullWebhookUrl}`);
+      
+      try {
+        // 使用 GET 方式（更简单，参数在 URL 中）
+        const telegramApiUrl = `https://api.telegram.org/bot${env.BOT_TOKEN}/setWebhook?url=${encodeURIComponent(fullWebhookUrl)}`;
+        
+        const response = await fetch(telegramApiUrl, {
+          method: 'GET',
+        });
+        
+        const data: any = await response.json();
+        
+        if (data.ok) {
+          console.log('✅ Webhook 设置成功');
+          return new Response(JSON.stringify({
+            success: true,
+            message: 'Webhook 设置成功',
+            webhook_url: fullWebhookUrl,
+            telegram_response: data,
+            timestamp: new Date().toISOString(),
+          }), {
+            status: 200,
+            headers,
+          });
+        } else {
+          console.error('Webhook 设置失败:', data);
+          return new Response(JSON.stringify({
+            success: false,
+            message: 'Webhook 设置失败',
+            error: data.description || 'Unknown error',
+            telegram_response: data,
+          }), {
+            status: 500,
+            headers,
+          });
+        }
+      } catch (error) {
+        console.error('设置 Webhook 异常:', error);
+        return new Response(JSON.stringify({
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+          message: '调用 Telegram API 失败',
+        }), {
+          status: 500,
+          headers,
+        });
+      }
+    }
+    
+    // 获取 Webhook 信息端点
+    if (path === '/webhook-info') {
+      const headers = {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      };
+      
+      if (!env.BOT_TOKEN) {
+        return new Response(JSON.stringify({ 
+          success: false,
+          error: 'BOT_TOKEN not configured' 
+        }), {
+          status: 500,
+          headers,
+        });
+      }
+      
+      try {
+        const response = await fetch(
+          `https://api.telegram.org/bot${env.BOT_TOKEN}/getWebhookInfo`
+        );
+        
+        const data = await response.json();
+        
+        return new Response(JSON.stringify(data), {
+          status: 200,
+          headers,
+        });
+      } catch (error) {
+        console.error('获取 Webhook 信息失败:', error);
+        return new Response(JSON.stringify({
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        }), {
+          status: 500,
+          headers,
+        });
+      }
+    }
+    
     // Webhook 端点
     if (path === '/webhook' || path === '/api/webhook' || path === '/tg/webhook') {
       // 只接受 POST 请求
