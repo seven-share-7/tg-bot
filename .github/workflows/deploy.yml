@@ -49,78 +49,64 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy
-        env:
-          # 环境变量会自动同步到 Cloudflare Workers
-          # 敏感信息应在 Cloudflare Dashboard 中配置为 Secret
-          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-          ALIPAY_APP_ID: ${{ secrets.ALIPAY_APP_ID }}
-          ALIPAY_PRIVATE_KEY: ${{ secrets.ALIPAY_PRIVATE_KEY }}
-          ALIPAY_PUBLIC_KEY: ${{ secrets.ALIPAY_PUBLIC_KEY }}
-          ALIPAY_NOTIFY_URL: ${{ secrets.ALIPAY_NOTIFY_URL }}
-          WECHAT_APP_ID: ${{ secrets.WECHAT_APP_ID }}
-          WECHAT_MCH_ID: ${{ secrets.WECHAT_MCH_ID }}
-          WECHAT_API_KEY: ${{ secrets.WECHAT_API_KEY }}
-          WECHAT_NOTIFY_URL: ${{ secrets.WECHAT_NOTIFY_URL }}
-          USTD_API_KEY: ${{ secrets.USTD_API_KEY }}
-          USTD_NOTIFY_URL: ${{ secrets.USTD_NOTIFY_URL }}
-          OFFICIAL_CHANNEL_ID: ${{ secrets.OFFICIAL_CHANNEL_ID }}
-          IMAGE_GENERATION_API_URL: ${{ secrets.IMAGE_GENERATION_API_URL }}
-          IMAGE_GENERATION_API_KEY: ${{ secrets.IMAGE_GENERATION_API_KEY }}
-          VIDEO_GENERATION_API_URL: ${{ secrets.VIDEO_GENERATION_API_URL }}
-          VIDEO_GENERATION_API_KEY: ${{ secrets.VIDEO_GENERATION_API_KEY }}
-          WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
           
-      # 7. 设置 Telegram Webhook
-      - name: Set Telegram Webhook
+      # 7. 自动设置 Telegram Webhook（调用管理端点）
+      - name: Setup Telegram Webhook
         if: success()
         run: |
-          WORKER_URL="${{ secrets.WEBHOOK_URL }}"
-          BOT_TOKEN="${{ secrets.BOT_TOKEN }}"
+          echo "⏳ 等待 Worker 完全就绪..."
+          sleep 5
           
-          if [ -z "$WORKER_URL" ] || [ -z "$BOT_TOKEN" ]; then
-            echo "⚠️  WEBHOOK_URL 或 BOT_TOKEN 未设置，跳过 Webhook 设置"
-            exit 0
+          echo "📡 调用 Webhook 设置端点..."
+          WEBHOOK_URL="${{ secrets.WEBHOOK_URL }}"
+          
+          if [ -z "$WEBHOOK_URL" ]; then
+            WEBHOOK_URL="https://amitgbot.undream.love"
+            echo "💡 使用默认 Webhook URL: $WEBHOOK_URL"
           fi
           
-          echo "设置 Telegram Webhook..."
-          RESPONSE=$(curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/setWebhook" \
-            -H "Content-Type: application/json" \
-            -d "{\"url\": \"${WORKER_URL}/webhook\"}")
+          # 调用管理端点设置 Webhook
+          RESPONSE=$(curl -s -w "\n%{http_code}" "${WEBHOOK_URL}/setup-webhook")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
           
-          echo "Telegram API 响应: $RESPONSE"
+          echo "HTTP 状态码: $HTTP_CODE"
+          echo "响应内容: $BODY"
           
-          # 检查是否成功
-          if echo "$RESPONSE" | grep -q '"ok":true'; then
+          if [ "$HTTP_CODE" = "200" ]; then
             echo "✅ Webhook 设置成功！"
+            echo "$BODY" | jq '.'
           else
-            echo "❌ Webhook 设置失败"
-            exit 1
+            echo "⚠️  Webhook 设置失败（HTTP $HTTP_CODE）"
+            echo "💡 你可以手动访问: ${WEBHOOK_URL}/setup-webhook"
+            echo "📋 或者查看日志: wrangler tail"
           fi
           
       # 8. 验证 Webhook 状态
-      - name: Verify Webhook
+      - name: Verify Webhook Status
         if: success()
         run: |
-          BOT_TOKEN="${{ secrets.BOT_TOKEN }}"
+          echo "🔍 验证 Webhook 状态..."
+          WEBHOOK_URL="${{ secrets.WEBHOOK_URL }}"
           
-          if [ -z "$BOT_TOKEN" ]; then
-            echo "⚠️  BOT_TOKEN 未设置，跳过 Webhook 验证"
-            exit 0
+          if [ -z "$WEBHOOK_URL" ]; then
+            WEBHOOK_URL="https://amitgbot.undream.love"
           fi
           
-          echo "验证 Webhook 状态..."
-          RESPONSE=$(curl -s "https://api.telegram.org/bot${BOT_TOKEN}/getWebhookInfo")
+          sleep 2
+          RESPONSE=$(curl -s "${WEBHOOK_URL}/webhook-info")
           
           echo "Webhook 信息:"
-          echo "$RESPONSE" | jq '.'
+          echo "$RESPONSE" | jq '.' || echo "$RESPONSE"
           
       # 9. 部署成功通知
       - name: Deployment success
         if: success()
         run: |
           echo "🎉 部署成功！"
-          echo "Worker URL: ${{ secrets.WEBHOOK_URL }}"
-          echo "请在 Telegram 中测试你的 Bot"
+          echo "✅ Worker 已更新到最新版本"
+          echo "💡 请确保在 Cloudflare Dashboard 中配置了所有必需的环境变量"
+          echo "🔗 Cloudflare Dashboard: https://dash.cloudflare.com"
           
       # 10. 部署失败通知
       - name: Deployment failed
