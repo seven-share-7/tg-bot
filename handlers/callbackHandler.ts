@@ -71,8 +71,29 @@ export async function handleCallbackQuery(
     
     // 官方频道检查（点击后显示功能菜单）
     if (data === 'menu_channel') {
+      const channelId = config.officialChannelId || '';
+      
+      // 检查频道 ID 是否已配置
+      if (!channelId || 
+          channelId === '@your_official_channel' || 
+          channelId === 'your_official_channel' ||
+          channelId.includes('your_official_channel')) {
+        await bot.editMessageText(
+          '⚠️ 官方频道未配置\n\n请联系管理员配置官方频道 ID。',
+          {
+            chat_id: query.message.chat.id,
+            message_id: query.message.message_id,
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '⬅️ 返回主菜单', callback_data: 'menu_main' }],
+              ],
+            },
+          }
+        );
+        return;
+      }
+      
       const isSubscribed = await checkUserSubscribed(bot, userId);
-      const channelId = config.officialChannelId || '@your_official_channel';
       
       if (isSubscribed) {
         // 已关注，显示功能菜单
@@ -88,7 +109,9 @@ export async function handleCallbackQuery(
         // 未关注，提示关注
         const channelUrl = channelId.startsWith('@') 
           ? `https://t.me/${channelId.substring(1)}` 
-          : channelId;
+          : channelId.startsWith('http')
+          ? channelId
+          : `https://t.me/${channelId}`;
         
         await bot.editMessageText(
           `❌ 请先关注官方频道才能使用功能！\n\n📢 官方频道：${channelId}\n\n关注后请点击"📣 官方频道"按钮验证。`,

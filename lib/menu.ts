@@ -40,13 +40,17 @@ export const DISCLAIMER_MESSAGE = `本机器人的使用条款和免责声明
  * 根据频道 ID 生成频道 URL
  * 
  * @param {string} channelId - 频道 ID（@channel_name 或数字 ID）
- * @return {string} 频道 URL
+ * @return {string} 频道 URL，如果未配置则返回空字符串
  * @author seven
  * @since 2024
  */
 function getChannelUrl(channelId: string): string {
-  if (!channelId) {
-    return 'https://t.me/your_official_channel';
+  // 检查是否为空或占位符
+  if (!channelId || 
+      channelId === '@your_official_channel' || 
+      channelId === 'your_official_channel' ||
+      channelId.includes('your_official_channel')) {
+    return ''; // 返回空字符串表示未配置
   }
   
   // 如果已经是完整 URL，直接返回
@@ -74,18 +78,23 @@ function getChannelUrl(channelId: string): string {
  */
 export function getMainMenuKeyboard(channelId?: string): InlineKeyboardMarkup {
   const channelUrl = getChannelUrl(channelId || '');
+  const keyboard: InlineKeyboardButton[][] = [];
+  
+  // 只有当频道 URL 有效时才显示"进入官方频道"按钮
+  if (channelUrl) {
+    keyboard.push([
+      { text: '📢 进入官方频道', url: channelUrl },
+    ]);
+  }
+  
+  keyboard.push([
+    { text: '👤 个人中心', callback_data: 'menu_profile' },
+    { text: '💰 获积分', callback_data: 'menu_points' },
+    { text: '📣 官方频道', callback_data: 'menu_channel' },
+  ]);
   
   return {
-    inline_keyboard: [
-      [
-        { text: '📢 进入官方频道', url: channelUrl },
-      ],
-      [
-        { text: '👤 个人中心', callback_data: 'menu_profile' },
-        { text: '💰 获积分', callback_data: 'menu_points' },
-        { text: '📣 官方频道', callback_data: 'menu_channel' },
-      ],
-    ],
+    inline_keyboard: keyboard,
   };
 }
 
