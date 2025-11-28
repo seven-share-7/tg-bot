@@ -387,7 +387,109 @@ ${referralLink}
       return;
     }
     
-    // 其他菜单项（待实现）
+    // 胸部爱抚
+    if (data === 'menu_breast') {
+      await bot.editMessageText(
+        '💋 胸部爱抚功能：\n\n🖼️ 图片处理：5积分/图片\n🎬 视频处理：20积分/视频\n\n🚧 功能开发中，敬请期待。',
+        {
+          chat_id: query.message.chat.id,
+          message_id: query.message.message_id,
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '⬅️ 返回功能菜单', callback_data: 'menu_channel' }],
+            ],
+          },
+        }
+      );
+      return;
+    }
+    
+    // 自慰
+    if (data === 'menu_masturbate') {
+      await bot.editMessageText(
+        '🫦 自慰功能：\n\n🖼️ 图片处理：5积分/图片\n🎬 视频处理：20积分/视频\n\n🚧 功能开发中，敬请期待。',
+        {
+          chat_id: query.message.chat.id,
+          message_id: query.message.message_id,
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '⬅️ 返回功能菜单', callback_data: 'menu_channel' }],
+            ],
+          },
+        }
+      );
+      return;
+    }
+    
+    // 颜射
+    if (data === 'menu_facial') {
+      await bot.editMessageText(
+        '💦 颜射功能：\n\n🖼️ 图片处理：5积分/图片\n🎬 视频处理：20积分/视频\n\n🚧 功能开发中，敬请期待。',
+        {
+          chat_id: query.message.chat.id,
+          message_id: query.message.message_id,
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '⬅️ 返回功能菜单', callback_data: 'menu_channel' }],
+            ],
+          },
+        }
+      );
+      return;
+    }
+    
+    // 口交
+    if (data === 'menu_oral') {
+      await bot.editMessageText(
+        '👄 口交功能：\n\n🖼️ 图片处理：5积分/图片\n🎬 视频处理：20积分/视频\n\n🚧 功能开发中，敬请期待。',
+        {
+          chat_id: query.message.chat.id,
+          message_id: query.message.message_id,
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '⬅️ 返回功能菜单', callback_data: 'menu_channel' }],
+            ],
+          },
+        }
+      );
+      return;
+    }
+    
+    // 手交
+    if (data === 'menu_handjob') {
+      await bot.editMessageText(
+        '✋ 手交功能：\n\n🖼️ 图片处理：5积分/图片\n🎬 视频处理：20积分/视频\n\n🚧 功能开发中，敬请期待。',
+        {
+          chat_id: query.message.chat.id,
+          message_id: query.message.message_id,
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '⬅️ 返回功能菜单', callback_data: 'menu_channel' }],
+            ],
+          },
+        }
+      );
+      return;
+    }
+    
+    // 性交
+    if (data === 'menu_sex') {
+      await bot.editMessageText(
+        '🔥 性交功能：\n\n🖼️ 图片处理：5积分/图片\n🎬 视频处理：20积分/视频\n\n🚧 功能开发中，敬请期待。',
+        {
+          chat_id: query.message.chat.id,
+          message_id: query.message.message_id,
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '⬅️ 返回功能菜单', callback_data: 'menu_channel' }],
+            ],
+          },
+        }
+      );
+      return;
+    }
+    
+    // 其他未处理的菜单项
     await bot.editMessageText('🚧 功能开发中，敬请期待。', {
       chat_id: query.message.chat.id,
       message_id: query.message.message_id,
