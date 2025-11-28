@@ -71,16 +71,26 @@ export async function handleCallbackQuery(
     
     // 官方频道（点击后直接显示功能菜单）
     if (data === 'menu_channel') {
-      // 直接显示功能菜单，不检查是否关注
-      await bot.editMessageText(
-        '🎯 请选择功能：',
-        {
-          chat_id: query.message.chat.id,
-          message_id: query.message.message_id,
-          reply_markup: getFunctionMenuKeyboard(),
-        }
-      );
-      return;
+      logger.info(`处理 menu_channel 回调 - 用户ID: ${userId}`);
+      try {
+        // 直接显示功能菜单，不检查是否关注
+        const functionMenu = getFunctionMenuKeyboard();
+        logger.info(`功能菜单生成成功，按钮数量: ${functionMenu.inline_keyboard.length}`);
+        
+        await bot.editMessageText(
+          '🎯 请选择功能：',
+          {
+            chat_id: query.message.chat.id,
+            message_id: query.message.message_id,
+            reply_markup: functionMenu,
+          }
+        );
+        logger.info(`功能菜单显示成功 - 用户ID: ${userId}`);
+        return;
+      } catch (error) {
+        logger.error(`显示功能菜单失败 - 用户ID: ${userId}, 错误: ${error}`);
+        throw error;
+      }
     }
     
     // 积分菜单
@@ -442,6 +452,7 @@ ${referralLink}
     }
     
     // 其他未处理的菜单项
+    logger.warn(`未处理的回调数据 - 用户ID: ${userId}, 数据: ${data}`);
     await bot.editMessageText('🚧 功能开发中，敬请期待。', {
       chat_id: query.message.chat.id,
       message_id: query.message.message_id,
