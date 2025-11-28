@@ -50,56 +50,24 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy
           
-      # 7. 自动设置 Telegram Webhook（调用管理端点）
-      - name: Setup Telegram Webhook
+      # 7. 部署成功提示
+      - name: Deployment Complete
         if: success()
         run: |
-          echo "⏳ 等待 Worker 完全就绪..."
-          sleep 5
+          echo "🎉 部署成功！"
+          echo "✅ Worker 已更新到最新版本"
+          echo ""
+          echo "📝 接下来的步骤："
+          echo "1️⃣  访问 https://amitgbot.undream.love/health 验证服务运行"
+          echo "2️⃣  在 Telegram 向 Bot 发送 /start 测试"
+          echo "3️⃣  Bot 会在首次收到消息时自动设置 Webhook"
+          echo ""
+          echo "💡 提示："
+          echo "   - Webhook 会在第一次 Telegram 消息时自动配置"
+          echo "   - 或手动访问（需通过 Cloudflare 验证）: https://amitgbot.undream.love/setup-webhook"
+          echo "   - 查看 Webhook 状态: https://amitgbot.undream.love/webhook-info"
           
-          echo "📡 调用 Webhook 设置端点..."
-          WEBHOOK_URL="${{ secrets.WEBHOOK_URL }}"
-          
-          if [ -z "$WEBHOOK_URL" ]; then
-            WEBHOOK_URL="https://amitgbot.undream.love"
-            echo "💡 使用默认 Webhook URL: $WEBHOOK_URL"
-          fi
-          
-          # 调用管理端点设置 Webhook
-          RESPONSE=$(curl -s -w "\n%{http_code}" "${WEBHOOK_URL}/setup-webhook")
-          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-          BODY=$(echo "$RESPONSE" | sed '$d')
-          
-          echo "HTTP 状态码: $HTTP_CODE"
-          echo "响应内容: $BODY"
-          
-          if [ "$HTTP_CODE" = "200" ]; then
-            echo "✅ Webhook 设置成功！"
-            echo "$BODY" | jq '.'
-          else
-            echo "⚠️  Webhook 设置失败（HTTP $HTTP_CODE）"
-            echo "💡 你可以手动访问: ${WEBHOOK_URL}/setup-webhook"
-            echo "📋 或者查看日志: wrangler tail"
-          fi
-          
-      # 8. 验证 Webhook 状态
-      - name: Verify Webhook Status
-        if: success()
-        run: |
-          echo "🔍 验证 Webhook 状态..."
-          WEBHOOK_URL="${{ secrets.WEBHOOK_URL }}"
-          
-          if [ -z "$WEBHOOK_URL" ]; then
-            WEBHOOK_URL="https://amitgbot.undream.love"
-          fi
-          
-          sleep 2
-          RESPONSE=$(curl -s "${WEBHOOK_URL}/webhook-info")
-          
-          echo "Webhook 信息:"
-          echo "$RESPONSE" | jq '.' || echo "$RESPONSE"
-          
-      # 9. 部署成功通知
+      # 8. 部署失败通知
       - name: Deployment success
         if: success()
         run: |
@@ -108,7 +76,7 @@ jobs:
           echo "💡 请确保在 Cloudflare Dashboard 中配置了所有必需的环境变量"
           echo "🔗 Cloudflare Dashboard: https://dash.cloudflare.com"
           
-      # 10. 部署失败通知
+      # 9. 部署失败通知
       - name: Deployment failed
         if: failure()
         run: |
