@@ -9,6 +9,7 @@ import logger from '@/lib/logger';
 import { DISCLAIMER_MESSAGE, getMainMenuKeyboard } from '@/lib/menu';
 import { getOrCreateUser } from '@/services/userService';
 import { processReferral } from '@/services/referralService';
+import { config } from '@/lib/config';
 
 /**
  * 处理 /start 命令
@@ -63,7 +64,7 @@ export async function handleStartCommand(
       msg.chat.id,
       DISCLAIMER_MESSAGE,
       {
-        reply_markup: getMainMenuKeyboard(),
+        reply_markup: getMainMenuKeyboard(config.officialChannelId),
       }
     );
     

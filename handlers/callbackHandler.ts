@@ -8,6 +8,7 @@ import TelegramBot from 'node-telegram-bot-api';
 import logger from '@/lib/logger';
 import {
   getMainMenuKeyboard,
+  getFunctionMenuKeyboard,
   getStripMenuKeyboard,
   getPointsMenuKeyboard,
   getRechargeMenuKeyboard,
@@ -18,6 +19,7 @@ import { createPayment, updatePaymentUrl } from '@/services/paymentService';
 import { createAlipayPayment, createWechatPayment, createUsdtPayment } from '@/services/paymentApi';
 import { PaymentMethod } from '@/lib/constants';
 import { getReferralLink } from '@/services/referralService';
+import { checkUserSubscribed } from '@/services/channelService';
 import { config } from '@/lib/config';
 
 /**
@@ -49,7 +51,7 @@ export async function handleCallbackQuery(
       await bot.editMessageText('🎯 请选择功能：', {
         chat_id: query.message.chat.id,
         message_id: query.message.message_id,
-        reply_markup: getMainMenuKeyboard(),
+        reply_markup: getMainMenuKeyboard(config.officialChannelId),
       });
       return;
     }
@@ -64,6 +66,45 @@ export async function handleCallbackQuery(
           reply_markup: getStripMenuKeyboard(),
         }
       );
+      return;
+    }
+    
+    // 官方频道检查（点击后显示功能菜单）
+    if (data === 'menu_channel') {
+      const isSubscribed = await checkUserSubscribed(bot, userId);
+      const channelId = config.officialChannelId || '@your_official_channel';
+      
+      if (isSubscribed) {
+        // 已关注，显示功能菜单
+        await bot.editMessageText(
+          '✅ 已关注官方频道！\n\n🎯 请选择功能：',
+          {
+            chat_id: query.message.chat.id,
+            message_id: query.message.message_id,
+            reply_markup: getFunctionMenuKeyboard(),
+          }
+        );
+      } else {
+        // 未关注，提示关注
+        const channelUrl = channelId.startsWith('@') 
+          ? `https://t.me/${channelId.substring(1)}` 
+          : channelId;
+        
+        await bot.editMessageText(
+          `❌ 请先关注官方频道才能使用功能！\n\n📢 官方频道：${channelId}\n\n关注后请点击"📣 官方频道"按钮验证。`,
+          {
+            chat_id: query.message.chat.id,
+            message_id: query.message.message_id,
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '📢 进入官方频道', url: channelUrl }],
+                [{ text: '🔄 重新验证', callback_data: 'menu_channel' }],
+                [{ text: '⬅️ 返回主菜单', callback_data: 'menu_main' }],
+              ],
+            },
+          }
+        );
+      }
       return;
     }
     
@@ -123,13 +164,13 @@ export async function handleCallbackQuery(
         await bot.editMessageText(text, {
           chat_id: query.message.chat.id,
           message_id: query.message.message_id,
-          reply_markup: getMainMenuKeyboard(),
+          reply_markup: getMainMenuKeyboard(config.officialChannelId),
         });
       } else {
         await bot.editMessageText('用户不存在，请重新开始。', {
           chat_id: query.message.chat.id,
           message_id: query.message.message_id,
-          reply_markup: getMainMenuKeyboard(),
+          reply_markup: getMainMenuKeyboard(config.officialChannelId),
         });
       }
       return;
@@ -225,7 +266,7 @@ ${paymentUrl}
           await bot.editMessageText('创建支付订单失败，请稍后重试。', {
             chat_id: query.message.chat.id,
             message_id: query.message.message_id,
-            reply_markup: getMainMenuKeyboard(),
+            reply_markup: getMainMenuKeyboard(config.officialChannelId),
           });
         }
       }
@@ -255,13 +296,13 @@ ${referralLink}
         await bot.editMessageText(text, {
           chat_id: query.message.chat.id,
           message_id: query.message.message_id,
-          reply_markup: getMainMenuKeyboard(),
+          reply_markup: getMainMenuKeyboard(config.officialChannelId),
         });
       } else {
         await bot.editMessageText('用户不存在，请重新开始。', {
           chat_id: query.message.chat.id,
           message_id: query.message.message_id,
-          reply_markup: getMainMenuKeyboard(),
+          reply_markup: getMainMenuKeyboard(config.officialChannelId),
         });
       }
       return;
@@ -327,7 +368,7 @@ ${referralLink}
     await bot.editMessageText('🚧 功能开发中，敬请期待。', {
       chat_id: query.message.chat.id,
       message_id: query.message.message_id,
-      reply_markup: getMainMenuKeyboard(),
+      reply_markup: getMainMenuKeyboard(config.officialChannelId),
     });
   } catch (error) {
     logger.error(`处理回调查询失败: ${error}`);

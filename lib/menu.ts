@@ -37,13 +37,66 @@ export const DISCLAIMER_MESSAGE = `本机器人的使用条款和免责声明
 ⭐️ 不会存储用户提交的任何信息或图像，除了TelegramID，也没有权利将用户信息用于任何目的。`;
 
 /**
- * 获取主菜单键盘
+ * 根据频道 ID 生成频道 URL
  * 
+ * @param {string} channelId - 频道 ID（@channel_name 或数字 ID）
+ * @return {string} 频道 URL
+ * @author seven
+ * @since 2024
+ */
+function getChannelUrl(channelId: string): string {
+  if (!channelId) {
+    return 'https://t.me/your_official_channel';
+  }
+  
+  // 如果已经是完整 URL，直接返回
+  if (channelId.startsWith('http')) {
+    return channelId;
+  }
+  
+  // 如果是 @channel_name 格式，转换为 URL
+  if (channelId.startsWith('@')) {
+    return `https://t.me/${channelId.substring(1)}`;
+  }
+  
+  // 如果是数字 ID，需要特殊处理（Telegram 频道数字 ID 需要特殊格式）
+  // 这里假设是 @ 格式，如果不是，返回默认值
+  return `https://t.me/${channelId}`;
+}
+
+/**
+ * 获取主菜单键盘（不包含功能按钮，需要先关注频道）
+ * 
+ * @param {string} channelId - 官方频道 ID（可选，从配置读取）
  * @return {InlineKeyboardMarkup} 主菜单键盘
  * @author seven
  * @since 2024
  */
-export function getMainMenuKeyboard(): InlineKeyboardMarkup {
+export function getMainMenuKeyboard(channelId?: string): InlineKeyboardMarkup {
+  const channelUrl = getChannelUrl(channelId || '');
+  
+  return {
+    inline_keyboard: [
+      [
+        { text: '📢 进入官方频道', url: channelUrl },
+      ],
+      [
+        { text: '👤 个人中心', callback_data: 'menu_profile' },
+        { text: '💰 获积分', callback_data: 'menu_points' },
+        { text: '📣 官方频道', callback_data: 'menu_channel' },
+      ],
+    ],
+  };
+}
+
+/**
+ * 获取功能菜单键盘（关注频道后显示）
+ * 
+ * @return {InlineKeyboardMarkup} 功能菜单键盘
+ * @author seven
+ * @since 2024
+ */
+export function getFunctionMenuKeyboard(): InlineKeyboardMarkup {
   return {
     inline_keyboard: [
       [
@@ -60,12 +113,7 @@ export function getMainMenuKeyboard(): InlineKeyboardMarkup {
         { text: '🔥 性交', callback_data: 'menu_sex' },
       ],
       [
-        { text: '📢 进入官方频道', url: 'https://t.me/your_official_channel' },
-      ],
-      [
-        { text: '👤 个人中心', callback_data: 'menu_profile' },
-        { text: '💰 获积分', callback_data: 'menu_points' },
-        { text: '📣 官方频道', callback_data: 'menu_channel' },
+        { text: '⬅️ 返回主菜单', callback_data: 'menu_main' },
       ],
     ],
   };
@@ -86,7 +134,7 @@ export function getStripMenuKeyboard(): InlineKeyboardMarkup {
         { text: '🎬 视频脱衣', callback_data: 'strip_video' },
       ],
       [
-        { text: '⬅️ 返回主菜单', callback_data: 'menu_main' },
+        { text: '⬅️ 返回功能菜单', callback_data: 'menu_channel' },
       ],
     ],
   };
