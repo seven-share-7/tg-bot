@@ -597,11 +597,32 @@ async function handleTelegramUpdate(bot: TelegramBot, update: any, env: Env): Pr
         const parts = data.replace('upload_', '').split('_');
         if (parts.length >= 2) {
           const isVideo = parts[0] === 'video';
+          const featureType = parts[1]; // strip, breast, masturbate, etc.
           const pointsRequired = isVideo ? 20 : 5;
+          const typeText = isVideo ? '视频' : '图片';
           
           // 简化版本：提示用户上传图片（实际应该检查积分和频道）
-          await bot.answerCallbackQuery(query.id, { text: '请上传图片' });
-          await bot.sendMessage(chatId, '✅ 请上传图片，我将为您处理。\n\n注意：实际使用时需要检查积分和频道关注状态。');
+          await bot.answerCallbackQuery(query.id, { text: `请发送${typeText}给我` });
+          
+          // 发送清晰的提示信息
+          const promptText = `📤 请发送${typeText}给我
+
+✅ 检查通过，您可以开始上传${typeText}了！
+
+📝 操作步骤：
+1. 点击输入框左侧的 📎 附件按钮
+2. 选择"照片"或"图片"
+3. 选择或拍摄一张图片
+4. 发送给我
+
+💡 提示：
+• 建议上传：站立，单人，无遮挡，主体人物清晰的照片
+• 处理需要：${pointsRequired}积分
+• 处理完成后会自动扣除积分
+
+⏳ 我正在等待您的${typeText}...`;
+          
+          await bot.sendMessage(chatId, promptText);
         }
         return;
       }
