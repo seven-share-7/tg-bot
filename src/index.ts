@@ -6,7 +6,12 @@
  * @since 2025-11-28
  */
 import { initDatabase } from '../lib/prisma';
-import { DISCLAIMER_MESSAGE, getMainMenuKeyboard } from '../lib/menu';
+import { 
+  DISCLAIMER_MESSAGE, 
+  getMainMenuKeyboard, 
+  getFunctionMenuKeyboard,
+  getStripMenuKeyboard,
+} from '../lib/menu';
 
 /**
  * Cloudflare Workers 环境变量类型定义
@@ -164,10 +169,11 @@ class TelegramBot {
  * 
  * @param {TelegramBot} bot - Bot 实例
  * @param {any} update - Telegram 更新对象
+ * @param {Env} env - 环境变量
  * @author seven
  * @since 2025-11-28
  */
-async function handleTelegramUpdate(bot: TelegramBot, update: any): Promise<void> {
+async function handleTelegramUpdate(bot: TelegramBot, update: any, env: Env): Promise<void> {
   console.log('收到 Telegram 更新:', JSON.stringify(update, null, 2));
   
   try {
@@ -183,9 +189,12 @@ async function handleTelegramUpdate(bot: TelegramBot, update: any): Promise<void
       if (msg.text?.startsWith('/start')) {
         console.log('处理 /start 命令');
         
+        // 获取环境变量中的官方频道ID
+        const officialChannelId = env.OFFICIAL_CHANNEL_ID || '';
+        
         // 发送免责声明和完整菜单
         await bot.sendMessage(chatId, DISCLAIMER_MESSAGE, {
-          reply_markup: getMainMenuKeyboard(),
+          reply_markup: getMainMenuKeyboard(officialChannelId),
         });
       }
       // 处理其他文本消息
@@ -197,10 +206,150 @@ async function handleTelegramUpdate(bot: TelegramBot, update: any): Promise<void
     // 处理回调查询
     else if (update.callback_query) {
       const query = update.callback_query;
-      console.log(`处理回调查询 - 用户ID: ${query.from.id}, 数据: ${query.data}`);
+      const data = query.data;
+      const userId = query.from.id;
+      const chatId = query.message?.chat.id;
+      const messageId = query.message?.message_id;
       
-      await bot.answerCallbackQuery(query.id, {
-        text: '功能开发中...',
+      console.log(`处理回调查询 - 用户ID: ${userId}, 数据: ${data}`);
+      
+      // 先应答回调，避免 Telegram 显示加载状态
+      await bot.answerCallbackQuery(query.id);
+      
+      if (!chatId || !messageId) {
+        console.error('回调查询缺少必要的消息信息');
+        return;
+      }
+      
+      // 获取环境变量中的官方频道ID
+      const officialChannelId = env.OFFICIAL_CHANNEL_ID || '';
+      
+      // 主菜单
+      if (data === 'menu_main') {
+        await bot.editMessageText('🎯 请选择功能：', {
+          chat_id: chatId,
+          message_id: messageId,
+          reply_markup: getMainMenuKeyboard(officialChannelId),
+        });
+        return;
+      }
+      
+      // 官方频道（点击后直接显示功能菜单）
+      if (data === 'menu_channel') {
+        console.log(`处理 menu_channel 回调 - 用户ID: ${userId}`);
+        const functionMenu = getFunctionMenuKeyboard();
+        await bot.editMessageText('🎯 请选择功能：', {
+          chat_id: chatId,
+          message_id: messageId,
+          reply_markup: functionMenu,
+        });
+        return;
+      }
+      
+      // 脱衣菜单
+      if (data === 'menu_strip') {
+        await bot.editMessageText(
+          '👗 脱衣功能：\n\n🖼️ 图片脱衣：5积分/图片\n🎬 视频脱衣：20积分/视频',
+          {
+            chat_id: chatId,
+            message_id: messageId,
+            reply_markup: getStripMenuKeyboard(),
+          }
+        );
+        return;
+      }
+      
+      // 其他功能菜单项
+      if (data === 'menu_breast') {
+        await bot.editMessageText(
+          '💋 胸部爱抚功能：\n\n🖼️ 图片处理：5积分/图片\n🎬 视频处理：20积分/视频\n\n🚧 功能开发中，敬请期待。',
+          {
+            chat_id: chatId,
+            message_id: messageId,
+            reply_markup: {
+              inline_keyboard: [[{ text: '⬅️ 返回功能菜单', callback_data: 'menu_channel' }]],
+            },
+          }
+        );
+        return;
+      }
+      
+      if (data === 'menu_masturbate') {
+        await bot.editMessageText(
+          '🫦 自慰功能：\n\n🖼️ 图片处理：5积分/图片\n🎬 视频处理：20积分/视频\n\n🚧 功能开发中，敬请期待。',
+          {
+            chat_id: chatId,
+            message_id: messageId,
+            reply_markup: {
+              inline_keyboard: [[{ text: '⬅️ 返回功能菜单', callback_data: 'menu_channel' }]],
+            },
+          }
+        );
+        return;
+      }
+      
+      if (data === 'menu_facial') {
+        await bot.editMessageText(
+          '💦 颜射功能：\n\n🖼️ 图片处理：5积分/图片\n🎬 视频处理：20积分/视频\n\n🚧 功能开发中，敬请期待。',
+          {
+            chat_id: chatId,
+            message_id: messageId,
+            reply_markup: {
+              inline_keyboard: [[{ text: '⬅️ 返回功能菜单', callback_data: 'menu_channel' }]],
+            },
+          }
+        );
+        return;
+      }
+      
+      if (data === 'menu_oral') {
+        await bot.editMessageText(
+          '👄 口交功能：\n\n🖼️ 图片处理：5积分/图片\n🎬 视频处理：20积分/视频\n\n🚧 功能开发中，敬请期待。',
+          {
+            chat_id: chatId,
+            message_id: messageId,
+            reply_markup: {
+              inline_keyboard: [[{ text: '⬅️ 返回功能菜单', callback_data: 'menu_channel' }]],
+            },
+          }
+        );
+        return;
+      }
+      
+      if (data === 'menu_handjob') {
+        await bot.editMessageText(
+          '✋ 手交功能：\n\n🖼️ 图片处理：5积分/图片\n🎬 视频处理：20积分/视频\n\n🚧 功能开发中，敬请期待。',
+          {
+            chat_id: chatId,
+            message_id: messageId,
+            reply_markup: {
+              inline_keyboard: [[{ text: '⬅️ 返回功能菜单', callback_data: 'menu_channel' }]],
+            },
+          }
+        );
+        return;
+      }
+      
+      if (data === 'menu_sex') {
+        await bot.editMessageText(
+          '🔥 性交功能：\n\n🖼️ 图片处理：5积分/图片\n🎬 视频处理：20积分/视频\n\n🚧 功能开发中，敬请期待。',
+          {
+            chat_id: chatId,
+            message_id: messageId,
+            reply_markup: {
+              inline_keyboard: [[{ text: '⬅️ 返回功能菜单', callback_data: 'menu_channel' }]],
+            },
+          }
+        );
+        return;
+      }
+      
+      // 其他未处理的菜单项
+      console.warn(`未处理的回调数据 - 用户ID: ${userId}, 数据: ${data}`);
+      await bot.editMessageText('🚧 功能开发中，敬请期待。', {
+        chat_id: chatId,
+        message_id: messageId,
+        reply_markup: getMainMenuKeyboard(officialChannelId),
       });
     }
     else {
@@ -401,7 +550,7 @@ async function handleRequest(
       const update = await request.json();
       
       // 处理 Telegram 更新（异步，不阻塞响应）
-      ctx.waitUntil(handleTelegramUpdate(bot, update));
+      ctx.waitUntil(handleTelegramUpdate(bot, update, env));
       
       // 立即返回 200 OK（Telegram 要求）
       return new Response(JSON.stringify({ ok: true }), {
