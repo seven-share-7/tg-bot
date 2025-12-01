@@ -11,6 +11,10 @@ import {
   getMainMenuKeyboard, 
   getFunctionMenuKeyboard,
   getStripMenuKeyboard,
+  getPointsMenuKeyboard,
+  getRechargeMenuKeyboard,
+  getPaymentMethodKeyboard,
+  getConfirmRechargeKeyboard,
 } from '../lib/menu';
 
 /**
@@ -48,6 +52,13 @@ export interface Env {
   PROXY_URL?: string;
   LOG_LEVEL?: string;
   NODE_ENV?: string;
+  
+  // 客服配置
+  CUSTOMER_SERVICE_WECHAT?: string;
+  
+  // 分享配置
+  REFERRAL_VIDEO_URL?: string;
+  REFERRAL_IMAGE_URL?: string;
 }
 
 /**
@@ -256,6 +267,269 @@ async function handleTelegramUpdate(bot: TelegramBot, update: any, env: Env): Pr
             reply_markup: getStripMenuKeyboard(),
           }
         );
+        return;
+      }
+      
+      // 积分菜单
+      if (data === 'menu_points') {
+        await bot.editMessageText('💰 获积分：', {
+          chat_id: chatId,
+          message_id: messageId,
+          reply_markup: getPointsMenuKeyboard(),
+        });
+        return;
+      }
+      
+      // 充值菜单
+      if (data === 'points_recharge') {
+        const text = `💰 充值获积分
+
+📋 操作说明：
+请选择充值积分数量和支付方式后，点击确定充值。之后会返回支付链接。点击链接后跳转到相应方式中进行支付。
+
+💡 备注：生成1张图像消耗：5积分    生成1段视频消耗：20积分
+
+📦 积分套餐：
+• 💰 20积分/20元
+• 💎 55积分/50元
+• 💵 120积分/100元
+• 💶 250积分/200元`;
+        await bot.editMessageText(text, {
+          chat_id: chatId,
+          message_id: messageId,
+          reply_markup: getRechargeMenuKeyboard(),
+        });
+        return;
+      }
+      
+      // 选择充值套餐
+      if (data.startsWith('recharge_')) {
+        const packageKey = data.replace('recharge_', '');
+        const packages: Record<string, { points: number; price: number }> = {
+          '20': { points: 20, price: 20.0 },
+          '55': { points: 55, price: 50.0 },
+          '120': { points: 120, price: 100.0 },
+          '250': { points: 250, price: 200.0 },
+        };
+        const packageInfo = packages[packageKey];
+        if (!packageInfo) {
+          await bot.editMessageText('无效的套餐，请重新选择。', {
+            chat_id: chatId,
+            message_id: messageId,
+            reply_markup: getRechargeMenuKeyboard(),
+          });
+          return;
+        }
+        await bot.editMessageText(`💳 选择支付方式\n\n💰 套餐：${packageKey}积分 / ${packageInfo.price}元`, {
+          chat_id: chatId,
+          message_id: messageId,
+          reply_markup: getPaymentMethodKeyboard(packageKey),
+        });
+        return;
+      }
+      
+      // 选择支付方式（显示确认页面）
+      if (data.startsWith('select_pay_')) {
+        const parts = data.replace('select_pay_', '').split('_');
+        if (parts.length === 2) {
+          const packageKey = parts[0];
+          const paymentMethod = parts[1].toLowerCase();
+          const packages: Record<string, { points: number; price: number }> = {
+            '20': { points: 20, price: 20.0 },
+            '55': { points: 55, price: 50.0 },
+            '120': { points: 120, price: 100.0 },
+            '250': { points: 250, price: 200.0 },
+          };
+          const packageInfo = packages[packageKey];
+          
+          if (!packageInfo) {
+            await bot.editMessageText('无效的套餐，请重新选择。', {
+              chat_id: chatId,
+              message_id: messageId,
+              reply_markup: getRechargeMenuKeyboard(),
+            });
+            return;
+          }
+          
+          const paymentMethodName = paymentMethod === 'alipay' ? '支付宝' : 
+                                    paymentMethod === 'wechat' ? '微信' : 'USDT';
+          const paymentMethodEmoji = paymentMethod === 'alipay' ? '💙' : 
+                                     paymentMethod === 'wechat' ? '💚' : '₿';
+          
+          const confirmText = `💰 充值确认
+
+📦 套餐：${packageKey}积分 / ${packageInfo.price}元
+${paymentMethodEmoji} 支付方式：${paymentMethodName}
+
+请确认信息无误后，点击"确定充值"按钮。`;
+          
+          await bot.editMessageText(confirmText, {
+            chat_id: chatId,
+            message_id: messageId,
+            reply_markup: getConfirmRechargeKeyboard(packageKey, paymentMethod),
+          });
+        }
+        return;
+      }
+      
+      // 处理支付确认（创建订单）
+      if (data.startsWith('pay_')) {
+        const parts = data.split('_');
+        if (parts.length === 3) {
+          const packageKey = parts[1];
+          const paymentMethod = parts[2].toLowerCase();
+          const packages: Record<string, { points: number; price: number }> = {
+            '20': { points: 20, price: 20.0 },
+            '55': { points: 55, price: 50.0 },
+            '120': { points: 120, price: 100.0 },
+            '250': { points: 250, price: 200.0 },
+          };
+          const packageInfo = packages[packageKey];
+          
+          if (!packageInfo) {
+            await bot.editMessageText('无效的套餐，请重新选择。', {
+              chat_id: chatId,
+              message_id: messageId,
+              reply_markup: getRechargeMenuKeyboard(),
+            });
+            return;
+          }
+          
+          // 生成订单号（简化版本，实际应该调用数据库服务）
+          const orderNo = `ORDER${Date.now()}${userId}`;
+          
+          // 生成支付链接（临时实现，实际应调用支付API）
+          let paymentUrl = '';
+          let paymentText = '';
+          let tradeNo = '';
+          
+          if (paymentMethod === 'alipay') {
+            paymentUrl = `https://tm4.pmdf.cn/web/pay/${orderNo}.html`;
+            paymentText = `💙 支付宝支付
+
+💳 请打开链接并使用支付宝支付~
+💰 支付${packageInfo.price}元，充值${packageInfo.points}积分
+📝 订单号：${orderNo}(复制补单)
+🔗 支付链接：${paymentUrl}
+🌐 点击跳转到浏览器打开，或复制链接到浏览器打开
+⏰ 请于5分钟内完成支付，超过5分钟后支付失效~
+
+👇🏻点击一键跳转支付👇🏻`;
+          } else if (paymentMethod === 'wechat') {
+            tradeNo = orderNo.toLowerCase().substring(0, 24);
+            paymentUrl = `https://xhm.jmxhm.cn/submit.php?pid=1001&type=wxpay&out_trade_no=${tradeNo}&money=${packageInfo.price}`;
+            const customerService = env.CUSTOMER_SERVICE_WECHAT || '@telddavc';
+            paymentText = `💚 微信充值
+
+📝 您的支付订单号为：
+[ ${tradeNo} ]
+💡 请保留好订单号，如有问题，请向客服 ${customerService} 提供此订单号
+
+🔗 微信支付链接: 
+${paymentUrl}
+
+⏰ 请在15分钟内点上面链接完成支付订单。过期请重新选择。
+
+✅ 支付成功后，积分将自动到账。若5分钟仍未到账，请提供订单号，联系客服。`;
+          } else {
+            // USDT
+            paymentUrl = `https://pay.example.com/usdt/${orderNo}`;
+            paymentText = `₿ USDT支付
+
+📝 订单号：${orderNo}
+💰 金额：${packageInfo.price}元
+💎 积分：${packageInfo.points}积分
+🔗 支付链接：${paymentUrl}`;
+          }
+          
+          await bot.editMessageText(paymentText, {
+            chat_id: chatId,
+            message_id: messageId,
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '💳 跳转支付', url: paymentUrl }],
+                [{ text: '⬅️ 返回主菜单', callback_data: 'menu_main' }],
+              ],
+            },
+          });
+        }
+        return;
+      }
+      
+      // 分享获积分
+      if (data === 'points_share') {
+        // 简化版本：显示分享信息（实际应获取用户推广码）
+        const botInfo = await bot.getMe();
+        const referralCode = `REF${userId}`; // 简化版本，实际应从数据库获取
+        const referralLink = `https://t.me/${botInfo.username}?start=${referralCode}`;
+        
+        const shareText = `🎁 分享获积分
+
+📤 下面这条消息带有你的专属分享链接，请分享到其他群或用户。其他用户进来后，你将获取积分。
+
+📋 积分规则：
+✨ 新用户通过你的专属链接使用机器人，你将获取40积分。推广用户无积分上限。
+🎯 非新用户通过你的专属链接使用机器人，如果该用户7天内没有通过别人的推广链接使用机器人，则你将获取10积分。积分每日上限：100
+
+🔗 你的专属推广链接：
+${referralLink}
+
+🎫 推广码：${referralCode}`;
+        
+        await bot.editMessageText(shareText, {
+          chat_id: chatId,
+          message_id: messageId,
+          reply_markup: getMainMenuKeyboard(officialChannelId),
+        });
+        
+        // 发送可分享的消息
+        const referralVideoUrl = env.REFERRAL_VIDEO_URL || '';
+        const referralImageUrl = env.REFERRAL_IMAGE_URL || '';
+        const promotionText = `一张图片做揉奶，吃屌，性交，射脸视频。让你的女神/女友/老婆/姐妹随你心意。效果不错，来试试吧！ 
+
+点我进入：${referralLink}`;
+        
+        try {
+          if (referralVideoUrl) {
+            await bot.sendVideo(chatId, referralVideoUrl, {
+              caption: promotionText,
+              reply_markup: {
+                inline_keyboard: [[{ text: '点我进入', url: referralLink }]],
+              },
+            });
+          } else if (referralImageUrl) {
+            await bot.sendPhoto(chatId, referralImageUrl, {
+              caption: promotionText,
+              reply_markup: {
+                inline_keyboard: [[{ text: '点我进入', url: referralLink }]],
+              },
+            });
+          } else {
+            await bot.sendMessage(chatId, promotionText, {
+              reply_markup: {
+                inline_keyboard: [[{ text: '点我进入', url: referralLink }]],
+              },
+            });
+          }
+        } catch (error) {
+          console.error(`发送分享消息失败: ${error}`);
+        }
+        return;
+      }
+      
+      // 个人中心
+      if (data === 'menu_profile') {
+        // 简化版本：显示基本信息（实际应从数据库获取）
+        const text = `👤 个人中心
+
+👤 【名称】：用户${userId}
+⭐️ 【积分】：0
+💎 【等级】：1`;
+        await bot.editMessageText(text, {
+          chat_id: chatId,
+          message_id: messageId,
+          reply_markup: getMainMenuKeyboard(officialChannelId),
+        });
         return;
       }
       
