@@ -45,6 +45,17 @@ export const config = {
   // 官方频道配置
   officialChannelId: process.env.OFFICIAL_CHANNEL_ID || '',
   
+  // 客服配置
+  customerService: {
+    wechatUsername: process.env.CUSTOMER_SERVICE_WECHAT || '@telddavc',
+  },
+  
+  // 分享配置
+  referral: {
+    videoUrl: process.env.REFERRAL_VIDEO_URL || '',
+    imageUrl: process.env.REFERRAL_IMAGE_URL || '',
+  },
+  
   // 图像生成API配置
   imageGeneration: {
     apiUrl: process.env.IMAGE_GENERATION_API_URL || '',

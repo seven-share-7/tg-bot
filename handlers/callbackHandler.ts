@@ -13,6 +13,7 @@ import {
   getPointsMenuKeyboard,
   getRechargeMenuKeyboard,
   getPaymentMethodKeyboard,
+  getConfirmRechargeKeyboard,
 } from '@/lib/menu';
 import { getUserByTelegramId } from '@/services/userService';
 import { createPayment, updatePaymentUrl } from '@/services/paymentService';
@@ -21,6 +22,7 @@ import { PaymentMethod } from '@/lib/constants';
 import { getReferralLink } from '@/services/referralService';
 import { checkUserSubscribed } from '@/services/channelService';
 import { config } from '@/lib/config';
+import { POINTS_PACKAGES } from '@/services/paymentService';
 
 /**
  * 处理回调查询
@@ -128,11 +130,58 @@ export async function handleCallbackQuery(
     // 选择充值套餐
     if (data.startsWith('recharge_')) {
       const packageKey = data.replace('recharge_', '');
-      await bot.editMessageText(`💳 选择支付方式（套餐：${packageKey}积分）`, {
+      const packageInfo = POINTS_PACKAGES[packageKey];
+      if (!packageInfo) {
+        await bot.editMessageText('无效的套餐，请重新选择。', {
+          chat_id: query.message.chat.id,
+          message_id: query.message.message_id,
+          reply_markup: getRechargeMenuKeyboard(),
+        });
+        return;
+      }
+      await bot.editMessageText(`💳 选择支付方式\n\n💰 套餐：${packageKey}积分 / ${packageInfo.price}元`, {
         chat_id: query.message.chat.id,
         message_id: query.message.message_id,
         reply_markup: getPaymentMethodKeyboard(packageKey),
       });
+      return;
+    }
+    
+    // 选择支付方式（显示确认页面）
+    if (data.startsWith('select_pay_')) {
+      const parts = data.replace('select_pay_', '').split('_');
+      if (parts.length === 2) {
+        const packageKey = parts[0];
+        const paymentMethod = parts[1].toLowerCase();
+        const packageInfo = POINTS_PACKAGES[packageKey];
+        
+        if (!packageInfo) {
+          await bot.editMessageText('无效的套餐，请重新选择。', {
+            chat_id: query.message.chat.id,
+            message_id: query.message.message_id,
+            reply_markup: getRechargeMenuKeyboard(),
+          });
+          return;
+        }
+        
+        const paymentMethodName = paymentMethod === 'alipay' ? '支付宝' : 
+                                  paymentMethod === 'wechat' ? '微信' : 'USDT';
+        const paymentMethodEmoji = paymentMethod === 'alipay' ? '💙' : 
+                                   paymentMethod === 'wechat' ? '💚' : '₿';
+        
+        const confirmText = `💰 充值确认
+
+📦 套餐：${packageKey}积分 / ${packageInfo.price}元
+${paymentMethodEmoji} 支付方式：${paymentMethodName}
+
+请确认信息无误后，点击"确定充值"按钮。`;
+        
+        await bot.editMessageText(confirmText, {
+          chat_id: query.message.chat.id,
+          message_id: query.message.message_id,
+          reply_markup: getConfirmRechargeKeyboard(packageKey, paymentMethod),
+        });
+      }
       return;
     }
     
@@ -205,14 +254,19 @@ export async function handleCallbackQuery(
             const { tradeNo, paymentUrl } = await createWechatPayment(payment);
             await updatePaymentUrl(payment, paymentUrl);
             
+            const customerService = config.customerService?.wechatUsername || '@telddavc';
+            
             text = `💚 微信充值
 
 📝 您的支付订单号为：
 [ ${tradeNo} ]
-💡 请保留好订单号，如有问题，请向客服提供此订单号
+💡 请保留好订单号，如有问题，请向客服 ${customerService} 提供此订单号
+
 🔗 微信支付链接: 
 ${paymentUrl}
+
 ⏰ 请在15分钟内点上面链接完成支付订单。过期请重新选择。
+
 ✅ 支付成功后，积分将自动到账。若5分钟仍未到账，请提供订单号，联系客服。`;
             
             replyMarkup = {
@@ -265,7 +319,7 @@ ${paymentUrl}
         const botInfo = await bot.getMe();
         const referralLink = getReferralLink(botInfo.username || '', dbUser.referralCode);
         
-        const text = `🎁 分享获积分
+        const shareText = `🎁 分享获积分
 
 📤 下面这条消息带有你的专属分享链接，请分享到其他群或用户。其他用户进来后，你将获取积分。
 
@@ -278,11 +332,60 @@ ${referralLink}
 
 🎫 推广码：${dbUser.referralCode}`;
         
-        await bot.editMessageText(text, {
+        // 先发送说明信息
+        await bot.editMessageText(shareText, {
           chat_id: query.message.chat.id,
           message_id: query.message.message_id,
           reply_markup: getMainMenuKeyboard(config.officialChannelId),
         });
+        
+        // 发送可分享的消息（包含视频/图片和推广链接）
+        try {
+          const referralVideoUrl = config.referral?.videoUrl;
+          const referralImageUrl = config.referral?.imageUrl;
+          
+          const promotionText = `一张图片做揉奶，吃屌，性交，射脸视频。让你的女神/女友/老婆/姐妹随你心意。效果不错，来试试吧！ 
+
+点我进入：${referralLink}`;
+          
+          // 如果有视频URL，发送视频
+          if (referralVideoUrl) {
+            await bot.sendVideo(query.message.chat.id, referralVideoUrl, {
+              caption: promotionText,
+              reply_markup: {
+                inline_keyboard: [
+                  [{ text: '点我进入', url: referralLink }],
+                ],
+              },
+            });
+          } 
+          // 如果有图片URL，发送图片
+          else if (referralImageUrl) {
+            await bot.sendPhoto(query.message.chat.id, referralImageUrl, {
+              caption: promotionText,
+              reply_markup: {
+                inline_keyboard: [
+                  [{ text: '点我进入', url: referralLink }],
+                ],
+              },
+            });
+          } 
+          // 如果没有配置视频/图片，只发送文本
+          else {
+            await bot.sendMessage(query.message.chat.id, promotionText, {
+              reply_markup: {
+                inline_keyboard: [
+                  [{ text: '点我进入', url: referralLink }],
+                ],
+              },
+            });
+          }
+          
+          logger.info(`分享消息发送成功 - 用户ID: ${userId}, 推广链接: ${referralLink}`);
+        } catch (error) {
+          logger.error(`发送分享消息失败 - 用户ID: ${userId}, 错误: ${error}`);
+          // 发送失败不影响主流程，只记录错误
+        }
       } else {
         await bot.editMessageText('用户不存在，请重新开始。', {
           chat_id: query.message.chat.id,

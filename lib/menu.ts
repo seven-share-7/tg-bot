@@ -207,12 +207,34 @@ export function getPaymentMethodKeyboard(packageKey: string): InlineKeyboardMark
   return {
     inline_keyboard: [
       [
-        { text: '₿ USDT', callback_data: `pay_${packageKey}_usdt` },
-        { text: '💚 微信', callback_data: `pay_${packageKey}_wechat` },
-        { text: '💙 支付宝', callback_data: `pay_${packageKey}_alipay` },
+        { text: '₿ USDT', callback_data: `select_pay_${packageKey}_usdt` },
+        { text: '💚 微信', callback_data: `select_pay_${packageKey}_wechat` },
+        { text: '💙 支付宝', callback_data: `select_pay_${packageKey}_alipay` },
       ],
       [
         { text: '⬅️ 返回', callback_data: 'points_recharge' },
+      ],
+    ],
+  };
+}
+
+/**
+ * 获取确认充值键盘
+ * 
+ * @param {string} packageKey - 套餐 key
+ * @param {string} paymentMethod - 支付方式（alipay/wechat/usdt）
+ * @return {InlineKeyboardMarkup} 确认充值键盘
+ * @author seven
+ * @since 2024
+ */
+export function getConfirmRechargeKeyboard(packageKey: string, paymentMethod: string): InlineKeyboardMarkup {
+  return {
+    inline_keyboard: [
+      [
+        { text: '✅ 确定充值', callback_data: `pay_${packageKey}_${paymentMethod}` },
+      ],
+      [
+        { text: '⬅️ 返回', callback_data: `recharge_${packageKey}` },
       ],
     ],
   };
