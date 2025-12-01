@@ -56,6 +56,14 @@ export const config = {
     imageUrl: process.env.REFERRAL_IMAGE_URL || '',
   },
   
+  // 功能配置
+  features: {
+    // 建议上传内容（可配置）
+    uploadSuggestion: process.env.UPLOAD_SUGGESTION || '站立，单人，无遮挡，主体人物清晰的照片无奇怪动作姿势',
+    // 官方频道名称（用于显示）
+    officialChannelName: process.env.OFFICIAL_CHANNEL_NAME || '【NSFW】官方功能更新频道',
+  },
+  
   // 图像生成API配置
   imageGeneration: {
     apiUrl: process.env.IMAGE_GENERATION_API_URL || '',

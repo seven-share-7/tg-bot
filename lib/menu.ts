@@ -150,6 +150,132 @@ export function getStripMenuKeyboard(): InlineKeyboardMarkup {
 }
 
 /**
+ * 获取胸部爱抚菜单键盘
+ * 
+ * @return {InlineKeyboardMarkup} 胸部爱抚菜单键盘
+ * @author seven
+ * @since 2024
+ */
+export function getBreastMenuKeyboard(): InlineKeyboardMarkup {
+  return {
+    inline_keyboard: [
+      [
+        { text: '🖼️ 图片处理', callback_data: 'breast_image' },
+        { text: '🎬 视频处理', callback_data: 'breast_video' },
+      ],
+      [
+        { text: '⬅️ 返回功能菜单', callback_data: 'menu_channel' },
+      ],
+    ],
+  };
+}
+
+/**
+ * 获取自慰菜单键盘
+ * 
+ * @return {InlineKeyboardMarkup} 自慰菜单键盘
+ * @author seven
+ * @since 2024
+ */
+export function getMasturbateMenuKeyboard(): InlineKeyboardMarkup {
+  return {
+    inline_keyboard: [
+      [
+        { text: '🖼️ 图片处理', callback_data: 'masturbate_image' },
+        { text: '🎬 视频处理', callback_data: 'masturbate_video' },
+      ],
+      [
+        { text: '⬅️ 返回功能菜单', callback_data: 'menu_channel' },
+      ],
+    ],
+  };
+}
+
+/**
+ * 获取颜射菜单键盘
+ * 
+ * @return {InlineKeyboardMarkup} 颜射菜单键盘
+ * @author seven
+ * @since 2024
+ */
+export function getFacialMenuKeyboard(): InlineKeyboardMarkup {
+  return {
+    inline_keyboard: [
+      [
+        { text: '🖼️ 图片处理', callback_data: 'facial_image' },
+        { text: '🎬 视频处理', callback_data: 'facial_video' },
+      ],
+      [
+        { text: '⬅️ 返回功能菜单', callback_data: 'menu_channel' },
+      ],
+    ],
+  };
+}
+
+/**
+ * 获取口交菜单键盘
+ * 
+ * @return {InlineKeyboardMarkup} 口交菜单键盘
+ * @author seven
+ * @since 2024
+ */
+export function getOralMenuKeyboard(): InlineKeyboardMarkup {
+  return {
+    inline_keyboard: [
+      [
+        { text: '🖼️ 图片处理', callback_data: 'oral_image' },
+        { text: '🎬 视频处理', callback_data: 'oral_video' },
+      ],
+      [
+        { text: '⬅️ 返回功能菜单', callback_data: 'menu_channel' },
+      ],
+    ],
+  };
+}
+
+/**
+ * 获取手交菜单键盘
+ * 
+ * @return {InlineKeyboardMarkup} 手交菜单键盘
+ * @author seven
+ * @since 2024
+ */
+export function getHandjobMenuKeyboard(): InlineKeyboardMarkup {
+  return {
+    inline_keyboard: [
+      [
+        { text: '🖼️ 图片处理', callback_data: 'handjob_image' },
+        { text: '🎬 视频处理', callback_data: 'handjob_video' },
+      ],
+      [
+        { text: '⬅️ 返回功能菜单', callback_data: 'menu_channel' },
+      ],
+    ],
+  };
+}
+
+/**
+ * 获取性交菜单键盘
+ * 
+ * @return {InlineKeyboardMarkup} 性交菜单键盘
+ * @author seven
+ * @since 2024
+ */
+export function getSexMenuKeyboard(): InlineKeyboardMarkup {
+  return {
+    inline_keyboard: [
+      [
+        { text: '🖼️ 图片处理', callback_data: 'sex_image' },
+        { text: '🎬 视频处理', callback_data: 'sex_video' },
+      ],
+      [
+        { text: '⬅️ 返回功能菜单', callback_data: 'menu_channel' },
+      ],
+    ],
+  };
+}
+
+/**
  * 获取积分菜单键盘
  * 
  * @return {InlineKeyboardMarkup} 积分菜单键盘

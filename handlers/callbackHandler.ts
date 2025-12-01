@@ -10,6 +10,12 @@ import {
   getMainMenuKeyboard,
   getFunctionMenuKeyboard,
   getStripMenuKeyboard,
+  getBreastMenuKeyboard,
+  getMasturbateMenuKeyboard,
+  getFacialMenuKeyboard,
+  getOralMenuKeyboard,
+  getHandjobMenuKeyboard,
+  getSexMenuKeyboard,
   getPointsMenuKeyboard,
   getRechargeMenuKeyboard,
   getPaymentMethodKeyboard,
@@ -23,6 +29,40 @@ import { getReferralLink } from '@/services/referralService';
 import { checkUserSubscribed } from '@/services/channelService';
 import { config } from '@/lib/config';
 import { POINTS_PACKAGES } from '@/services/paymentService';
+
+/**
+ * 生成功能详情页面文本
+ * 
+ * @param {string} featureName - 功能名称（带emoji）
+ * @param {number} imagePoints - 图片处理所需积分
+ * @param {number} videoPoints - 视频处理所需积分
+ * @param {boolean} isImage - 是否为图片处理
+ * @return {string} 功能详情文本
+ * @author seven
+ * @since 2024
+ */
+function getFeatureDetailText(
+  featureName: string,
+  imagePoints: number,
+  videoPoints: number,
+  isImage: boolean
+): string {
+  const points = isImage ? imagePoints : videoPoints;
+  const type = isImage ? '图片' : '视频';
+  const uploadSuggestion = config.features?.uploadSuggestion || '站立，单人，无遮挡，主体人物清晰的照片无奇怪动作姿势';
+  const channelName = config.features?.officialChannelName || '【NSFW】官方功能更新频道';
+  
+  return `${isImage ? '🖼️' : '🎬'} ${featureName}${type}处理：${points}积分/${type}
+
+⚠️ 注意事项：
+使用我们的服务即表示您同意，用户协议且不得用于非法用途。
+📸 建议上传：${uploadSuggestion}
+
+👀 效果预览 (${channelName})
+❌ 如果没有关注官方频道 机器人不会出图！
+
+📤 【菜单】上传图片`;
+}
 
 /**
  * 处理回调查询
@@ -396,26 +436,70 @@ ${referralLink}
       return;
     }
     
+    // 功能菜单项 - 显示图片/视频选择
+    if (data === 'menu_breast') {
+      await bot.editMessageText('💋 胸部爱抚功能：\n\n🖼️ 图片处理：5积分/图片\n🎬 视频处理：20积分/视频', {
+        chat_id: query.message.chat.id,
+        message_id: query.message.message_id,
+        reply_markup: getBreastMenuKeyboard(),
+      });
+      return;
+    }
+    
+    if (data === 'menu_masturbate') {
+      await bot.editMessageText('🫦 自慰功能：\n\n🖼️ 图片处理：5积分/图片\n🎬 视频处理：20积分/视频', {
+        chat_id: query.message.chat.id,
+        message_id: query.message.message_id,
+        reply_markup: getMasturbateMenuKeyboard(),
+      });
+      return;
+    }
+    
+    if (data === 'menu_facial') {
+      await bot.editMessageText('💦 颜射功能：\n\n🖼️ 图片处理：5积分/图片\n🎬 视频处理：20积分/视频', {
+        chat_id: query.message.chat.id,
+        message_id: query.message.message_id,
+        reply_markup: getFacialMenuKeyboard(),
+      });
+      return;
+    }
+    
+    if (data === 'menu_oral') {
+      await bot.editMessageText('👄 口交功能：\n\n🖼️ 图片处理：5积分/图片\n🎬 视频处理：20积分/视频', {
+        chat_id: query.message.chat.id,
+        message_id: query.message.message_id,
+        reply_markup: getOralMenuKeyboard(),
+      });
+      return;
+    }
+    
+    if (data === 'menu_handjob') {
+      await bot.editMessageText('✋ 手交功能：\n\n🖼️ 图片处理：5积分/图片\n🎬 视频处理：20积分/视频', {
+        chat_id: query.message.chat.id,
+        message_id: query.message.message_id,
+        reply_markup: getHandjobMenuKeyboard(),
+      });
+      return;
+    }
+    
+    if (data === 'menu_sex') {
+      await bot.editMessageText('🔥 性交功能：\n\n🖼️ 图片处理：5积分/图片\n🎬 视频处理：20积分/视频', {
+        chat_id: query.message.chat.id,
+        message_id: query.message.message_id,
+        reply_markup: getSexMenuKeyboard(),
+      });
+      return;
+    }
+    
     // 图片脱衣
     if (data === 'strip_image') {
-        const text = `🖼️ 图片脱衣：5积分/图片
-
-⚠️ 注意事项：
-使用我们的服务即表示您同意，用户协议且不得用于非法用途。
-📸 建议上传：站立，单人，无遮挡，主体人物清晰的照片无奇怪动作姿势
-
-👀 效果预览 (【NSFW】官方功能更新频道 )
-❌ 如果没有关注官方频道 机器人不会出图！
-
-📤 【菜单】上传图片`;
-      
+      const text = getFeatureDetailText('图片脱衣', 5, 20, true);
       const replyMarkup = {
         inline_keyboard: [
           [{ text: '📤 上传图片', callback_data: 'upload_image_strip' }],
           [{ text: '⬅️ 返回', callback_data: 'menu_strip' }],
         ],
       };
-      
       await bot.editMessageText(text, {
         chat_id: query.message.chat.id,
         message_id: query.message.message_id,
@@ -426,24 +510,13 @@ ${referralLink}
     
     // 视频脱衣
     if (data === 'strip_video') {
-        const text = `🎬 视频脱衣：20积分/视频
-
-⚠️ 注意事项：
-使用我们的服务即表示您同意 用户协议且不得用于非法用途。
-📸 建议上传站立，单人，无遮挡，主体人物清晰的照片 无奇怪动作姿势
-
-👀 效果预览 (【NSFW】官方功能更新频道 )
-❌ 如果没有关注官方频道 机器人不会出图！
-
-📤 【菜单】上传图片`;
-      
+      const text = getFeatureDetailText('视频脱衣', 5, 20, false);
       const replyMarkup = {
         inline_keyboard: [
           [{ text: '📤 上传图片', callback_data: 'upload_video_strip' }],
           [{ text: '⬅️ 返回', callback_data: 'menu_strip' }],
         ],
       };
-      
       await bot.editMessageText(text, {
         chat_id: query.message.chat.id,
         message_id: query.message.message_id,
@@ -452,105 +525,249 @@ ${referralLink}
       return;
     }
     
-    // 胸部爱抚
-    if (data === 'menu_breast') {
-      await bot.editMessageText(
-        '💋 胸部爱抚功能：\n\n🖼️ 图片处理：5积分/图片\n🎬 视频处理：20积分/视频\n\n🚧 功能开发中，敬请期待。',
-        {
-          chat_id: query.message.chat.id,
-          message_id: query.message.message_id,
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: '⬅️ 返回功能菜单', callback_data: 'menu_channel' }],
-            ],
-          },
-        }
-      );
+    // 胸部爱抚 - 图片
+    if (data === 'breast_image') {
+      const text = getFeatureDetailText('胸部爱抚', 5, 20, true);
+      const replyMarkup = {
+        inline_keyboard: [
+          [{ text: '📤 上传图片', callback_data: 'upload_image_breast' }],
+          [{ text: '⬅️ 返回', callback_data: 'menu_breast' }],
+        ],
+      };
+      await bot.editMessageText(text, {
+        chat_id: query.message.chat.id,
+        message_id: query.message.message_id,
+        reply_markup: replyMarkup,
+      });
       return;
     }
     
-    // 自慰
-    if (data === 'menu_masturbate') {
-      await bot.editMessageText(
-        '🫦 自慰功能：\n\n🖼️ 图片处理：5积分/图片\n🎬 视频处理：20积分/视频\n\n🚧 功能开发中，敬请期待。',
-        {
-          chat_id: query.message.chat.id,
-          message_id: query.message.message_id,
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: '⬅️ 返回功能菜单', callback_data: 'menu_channel' }],
-            ],
-          },
-        }
-      );
+    // 胸部爱抚 - 视频
+    if (data === 'breast_video') {
+      const text = getFeatureDetailText('胸部爱抚', 5, 20, false);
+      const replyMarkup = {
+        inline_keyboard: [
+          [{ text: '📤 上传图片', callback_data: 'upload_video_breast' }],
+          [{ text: '⬅️ 返回', callback_data: 'menu_breast' }],
+        ],
+      };
+      await bot.editMessageText(text, {
+        chat_id: query.message.chat.id,
+        message_id: query.message.message_id,
+        reply_markup: replyMarkup,
+      });
       return;
     }
     
-    // 颜射
-    if (data === 'menu_facial') {
-      await bot.editMessageText(
-        '💦 颜射功能：\n\n🖼️ 图片处理：5积分/图片\n🎬 视频处理：20积分/视频\n\n🚧 功能开发中，敬请期待。',
-        {
-          chat_id: query.message.chat.id,
-          message_id: query.message.message_id,
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: '⬅️ 返回功能菜单', callback_data: 'menu_channel' }],
-            ],
-          },
-        }
-      );
+    // 自慰 - 图片
+    if (data === 'masturbate_image') {
+      const text = getFeatureDetailText('自慰', 5, 20, true);
+      const replyMarkup = {
+        inline_keyboard: [
+          [{ text: '📤 上传图片', callback_data: 'upload_image_masturbate' }],
+          [{ text: '⬅️ 返回', callback_data: 'menu_masturbate' }],
+        ],
+      };
+      await bot.editMessageText(text, {
+        chat_id: query.message.chat.id,
+        message_id: query.message.message_id,
+        reply_markup: replyMarkup,
+      });
       return;
     }
     
-    // 口交
-    if (data === 'menu_oral') {
-      await bot.editMessageText(
-        '👄 口交功能：\n\n🖼️ 图片处理：5积分/图片\n🎬 视频处理：20积分/视频\n\n🚧 功能开发中，敬请期待。',
-        {
-          chat_id: query.message.chat.id,
-          message_id: query.message.message_id,
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: '⬅️ 返回功能菜单', callback_data: 'menu_channel' }],
-            ],
-          },
-        }
-      );
+    // 自慰 - 视频
+    if (data === 'masturbate_video') {
+      const text = getFeatureDetailText('自慰', 5, 20, false);
+      const replyMarkup = {
+        inline_keyboard: [
+          [{ text: '📤 上传图片', callback_data: 'upload_video_masturbate' }],
+          [{ text: '⬅️ 返回', callback_data: 'menu_masturbate' }],
+        ],
+      };
+      await bot.editMessageText(text, {
+        chat_id: query.message.chat.id,
+        message_id: query.message.message_id,
+        reply_markup: replyMarkup,
+      });
       return;
     }
     
-    // 手交
-    if (data === 'menu_handjob') {
-      await bot.editMessageText(
-        '✋ 手交功能：\n\n🖼️ 图片处理：5积分/图片\n🎬 视频处理：20积分/视频\n\n🚧 功能开发中，敬请期待。',
-        {
-          chat_id: query.message.chat.id,
-          message_id: query.message.message_id,
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: '⬅️ 返回功能菜单', callback_data: 'menu_channel' }],
-            ],
-          },
-        }
-      );
+    // 颜射 - 图片
+    if (data === 'facial_image') {
+      const text = getFeatureDetailText('颜射', 5, 20, true);
+      const replyMarkup = {
+        inline_keyboard: [
+          [{ text: '📤 上传图片', callback_data: 'upload_image_facial' }],
+          [{ text: '⬅️ 返回', callback_data: 'menu_facial' }],
+        ],
+      };
+      await bot.editMessageText(text, {
+        chat_id: query.message.chat.id,
+        message_id: query.message.message_id,
+        reply_markup: replyMarkup,
+      });
       return;
     }
     
-    // 性交
-    if (data === 'menu_sex') {
-      await bot.editMessageText(
-        '🔥 性交功能：\n\n🖼️ 图片处理：5积分/图片\n🎬 视频处理：20积分/视频\n\n🚧 功能开发中，敬请期待。',
-        {
-          chat_id: query.message.chat.id,
-          message_id: query.message.message_id,
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: '⬅️ 返回功能菜单', callback_data: 'menu_channel' }],
-            ],
-          },
+    // 颜射 - 视频
+    if (data === 'facial_video') {
+      const text = getFeatureDetailText('颜射', 5, 20, false);
+      const replyMarkup = {
+        inline_keyboard: [
+          [{ text: '📤 上传图片', callback_data: 'upload_video_facial' }],
+          [{ text: '⬅️ 返回', callback_data: 'menu_facial' }],
+        ],
+      };
+      await bot.editMessageText(text, {
+        chat_id: query.message.chat.id,
+        message_id: query.message.message_id,
+        reply_markup: replyMarkup,
+      });
+      return;
+    }
+    
+    // 口交 - 图片
+    if (data === 'oral_image') {
+      const text = getFeatureDetailText('口交', 5, 20, true);
+      const replyMarkup = {
+        inline_keyboard: [
+          [{ text: '📤 上传图片', callback_data: 'upload_image_oral' }],
+          [{ text: '⬅️ 返回', callback_data: 'menu_oral' }],
+        ],
+      };
+      await bot.editMessageText(text, {
+        chat_id: query.message.chat.id,
+        message_id: query.message.message_id,
+        reply_markup: replyMarkup,
+      });
+      return;
+    }
+    
+    // 口交 - 视频
+    if (data === 'oral_video') {
+      const text = getFeatureDetailText('口交', 5, 20, false);
+      const replyMarkup = {
+        inline_keyboard: [
+          [{ text: '📤 上传图片', callback_data: 'upload_video_oral' }],
+          [{ text: '⬅️ 返回', callback_data: 'menu_oral' }],
+        ],
+      };
+      await bot.editMessageText(text, {
+        chat_id: query.message.chat.id,
+        message_id: query.message.message_id,
+        reply_markup: replyMarkup,
+      });
+      return;
+    }
+    
+    // 手交 - 图片
+    if (data === 'handjob_image') {
+      const text = getFeatureDetailText('手交', 5, 20, true);
+      const replyMarkup = {
+        inline_keyboard: [
+          [{ text: '📤 上传图片', callback_data: 'upload_image_handjob' }],
+          [{ text: '⬅️ 返回', callback_data: 'menu_handjob' }],
+        ],
+      };
+      await bot.editMessageText(text, {
+        chat_id: query.message.chat.id,
+        message_id: query.message.message_id,
+        reply_markup: replyMarkup,
+      });
+      return;
+    }
+    
+    // 手交 - 视频
+    if (data === 'handjob_video') {
+      const text = getFeatureDetailText('手交', 5, 20, false);
+      const replyMarkup = {
+        inline_keyboard: [
+          [{ text: '📤 上传图片', callback_data: 'upload_video_handjob' }],
+          [{ text: '⬅️ 返回', callback_data: 'menu_handjob' }],
+        ],
+      };
+      await bot.editMessageText(text, {
+        chat_id: query.message.chat.id,
+        message_id: query.message.message_id,
+        reply_markup: replyMarkup,
+      });
+      return;
+    }
+    
+    // 性交 - 图片
+    if (data === 'sex_image') {
+      const text = getFeatureDetailText('性交', 5, 20, true);
+      const replyMarkup = {
+        inline_keyboard: [
+          [{ text: '📤 上传图片', callback_data: 'upload_image_sex' }],
+          [{ text: '⬅️ 返回', callback_data: 'menu_sex' }],
+        ],
+      };
+      await bot.editMessageText(text, {
+        chat_id: query.message.chat.id,
+        message_id: query.message.message_id,
+        reply_markup: replyMarkup,
+      });
+      return;
+    }
+    
+    // 性交 - 视频
+    if (data === 'sex_video') {
+      const text = getFeatureDetailText('性交', 5, 20, false);
+      const replyMarkup = {
+        inline_keyboard: [
+          [{ text: '📤 上传图片', callback_data: 'upload_video_sex' }],
+          [{ text: '⬅️ 返回', callback_data: 'menu_sex' }],
+        ],
+      };
+      await bot.editMessageText(text, {
+        chat_id: query.message.chat.id,
+        message_id: query.message.message_id,
+        reply_markup: replyMarkup,
+      });
+      return;
+    }
+    
+    // 处理上传图片按钮（检查积分和频道）
+    if (data.startsWith('upload_')) {
+      const parts = data.replace('upload_', '').split('_');
+      if (parts.length >= 2) {
+        const isVideo = parts[0] === 'video';
+        const featureType = parts[1]; // strip, breast, masturbate, etc.
+        const pointsRequired = isVideo ? 20 : 5;
+        
+        // 获取用户信息
+        const dbUser = await getUserByTelegramId(BigInt(userId));
+        if (!dbUser) {
+          await bot.answerCallbackQuery(query.id, { text: '请先使用 /start 命令开始使用机器人。' });
+          return;
         }
-      );
+        
+        // 检查积分
+        if (dbUser.points < pointsRequired) {
+          await bot.answerCallbackQuery(query.id, { 
+            text: `你的积分不足。当前积分：${dbUser.points}，需要积分：${pointsRequired}，请先获取足够积分`,
+            show_alert: true 
+          });
+          return;
+        }
+        
+        // 检查是否关注官方频道
+        const isSubscribed = await checkUserSubscribed(bot, userId);
+        if (!isSubscribed) {
+          const channelId = config.officialChannelId || '@your_official_channel';
+          await bot.answerCallbackQuery(query.id, { 
+            text: `请先关注官方频道才能使用此功能！\n官方频道：${channelId}`,
+            show_alert: true 
+          });
+          return;
+        }
+        
+        // 积分和频道检查通过，提示用户上传图片
+        await bot.answerCallbackQuery(query.id, { text: '请上传图片' });
+        await bot.sendMessage(query.message.chat.id, '✅ 请上传图片，我将为您处理。');
+      }
       return;
     }
     
