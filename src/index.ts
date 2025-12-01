@@ -11,6 +11,12 @@ import {
   getMainMenuKeyboard, 
   getFunctionMenuKeyboard,
   getStripMenuKeyboard,
+  getBreastMenuKeyboard,
+  getMasturbateMenuKeyboard,
+  getFacialMenuKeyboard,
+  getOralMenuKeyboard,
+  getHandjobMenuKeyboard,
+  getSexMenuKeyboard,
   getPointsMenuKeyboard,
   getRechargeMenuKeyboard,
   getPaymentMethodKeyboard,
@@ -59,6 +65,10 @@ export interface Env {
   // 分享配置
   REFERRAL_VIDEO_URL?: string;
   REFERRAL_IMAGE_URL?: string;
+  
+  // 功能配置
+  UPLOAD_SUGGESTION?: string;
+  OFFICIAL_CHANNEL_NAME?: string;
 }
 
 /**
@@ -267,6 +277,332 @@ async function handleTelegramUpdate(bot: TelegramBot, update: any, env: Env): Pr
             reply_markup: getStripMenuKeyboard(),
           }
         );
+        return;
+      }
+      
+      // 功能菜单项 - 显示图片/视频选择
+      if (data === 'menu_breast') {
+        await bot.editMessageText('💋 胸部爱抚功能：\n\n🖼️ 图片处理：5积分/图片\n🎬 视频处理：20积分/视频', {
+          chat_id: chatId,
+          message_id: messageId,
+          reply_markup: getBreastMenuKeyboard(),
+        });
+        return;
+      }
+      
+      if (data === 'menu_masturbate') {
+        await bot.editMessageText('🫦 自慰功能：\n\n🖼️ 图片处理：5积分/图片\n🎬 视频处理：20积分/视频', {
+          chat_id: chatId,
+          message_id: messageId,
+          reply_markup: getMasturbateMenuKeyboard(),
+        });
+        return;
+      }
+      
+      if (data === 'menu_facial') {
+        await bot.editMessageText('💦 颜射功能：\n\n🖼️ 图片处理：5积分/图片\n🎬 视频处理：20积分/视频', {
+          chat_id: chatId,
+          message_id: messageId,
+          reply_markup: getFacialMenuKeyboard(),
+        });
+        return;
+      }
+      
+      if (data === 'menu_oral') {
+        await bot.editMessageText('👄 口交功能：\n\n🖼️ 图片处理：5积分/图片\n🎬 视频处理：20积分/视频', {
+          chat_id: chatId,
+          message_id: messageId,
+          reply_markup: getOralMenuKeyboard(),
+        });
+        return;
+      }
+      
+      if (data === 'menu_handjob') {
+        await bot.editMessageText('✋ 手交功能：\n\n🖼️ 图片处理：5积分/图片\n🎬 视频处理：20积分/视频', {
+          chat_id: chatId,
+          message_id: messageId,
+          reply_markup: getHandjobMenuKeyboard(),
+        });
+        return;
+      }
+      
+      if (data === 'menu_sex') {
+        await bot.editMessageText('🔥 性交功能：\n\n🖼️ 图片处理：5积分/图片\n🎬 视频处理：20积分/视频', {
+          chat_id: chatId,
+          message_id: messageId,
+          reply_markup: getSexMenuKeyboard(),
+        });
+        return;
+      }
+      
+      // 生成功能详情页面文本的辅助函数
+      const getFeatureDetailText = (featureName: string, imagePoints: number, videoPoints: number, isImage: boolean): string => {
+        const points = isImage ? imagePoints : videoPoints;
+        const type = isImage ? '图片' : '视频';
+        const uploadSuggestion = env.UPLOAD_SUGGESTION || '站立，单人，无遮挡，主体人物清晰的照片无奇怪动作姿势';
+        const channelName = env.OFFICIAL_CHANNEL_NAME || '【NSFW】官方功能更新频道';
+        
+        return `${isImage ? '🖼️' : '🎬'} ${featureName}${type}处理：${points}积分/${type}
+
+⚠️ 注意事项：
+使用我们的服务即表示您同意，用户协议且不得用于非法用途。
+📸 建议上传：${uploadSuggestion}
+
+👀 效果预览 (${channelName})
+❌ 如果没有关注官方频道 机器人不会出图！
+
+📤 【菜单】上传图片`;
+      };
+      
+      // 图片脱衣
+      if (data === 'strip_image') {
+        const text = getFeatureDetailText('图片脱衣', 5, 20, true);
+        const replyMarkup = {
+          inline_keyboard: [
+            [{ text: '📤 上传图片', callback_data: 'upload_image_strip' }],
+            [{ text: '⬅️ 返回', callback_data: 'menu_strip' }],
+          ],
+        };
+        await bot.editMessageText(text, {
+          chat_id: chatId,
+          message_id: messageId,
+          reply_markup: replyMarkup,
+        });
+        return;
+      }
+      
+      // 视频脱衣
+      if (data === 'strip_video') {
+        const text = getFeatureDetailText('视频脱衣', 5, 20, false);
+        const replyMarkup = {
+          inline_keyboard: [
+            [{ text: '📤 上传图片', callback_data: 'upload_video_strip' }],
+            [{ text: '⬅️ 返回', callback_data: 'menu_strip' }],
+          ],
+        };
+        await bot.editMessageText(text, {
+          chat_id: chatId,
+          message_id: messageId,
+          reply_markup: replyMarkup,
+        });
+        return;
+      }
+      
+      // 胸部爱抚 - 图片
+      if (data === 'breast_image') {
+        const text = getFeatureDetailText('胸部爱抚', 5, 20, true);
+        const replyMarkup = {
+          inline_keyboard: [
+            [{ text: '📤 上传图片', callback_data: 'upload_image_breast' }],
+            [{ text: '⬅️ 返回', callback_data: 'menu_breast' }],
+          ],
+        };
+        await bot.editMessageText(text, {
+          chat_id: chatId,
+          message_id: messageId,
+          reply_markup: replyMarkup,
+        });
+        return;
+      }
+      
+      // 胸部爱抚 - 视频
+      if (data === 'breast_video') {
+        const text = getFeatureDetailText('胸部爱抚', 5, 20, false);
+        const replyMarkup = {
+          inline_keyboard: [
+            [{ text: '📤 上传图片', callback_data: 'upload_video_breast' }],
+            [{ text: '⬅️ 返回', callback_data: 'menu_breast' }],
+          ],
+        };
+        await bot.editMessageText(text, {
+          chat_id: chatId,
+          message_id: messageId,
+          reply_markup: replyMarkup,
+        });
+        return;
+      }
+      
+      // 自慰 - 图片
+      if (data === 'masturbate_image') {
+        const text = getFeatureDetailText('自慰', 5, 20, true);
+        const replyMarkup = {
+          inline_keyboard: [
+            [{ text: '📤 上传图片', callback_data: 'upload_image_masturbate' }],
+            [{ text: '⬅️ 返回', callback_data: 'menu_masturbate' }],
+          ],
+        };
+        await bot.editMessageText(text, {
+          chat_id: chatId,
+          message_id: messageId,
+          reply_markup: replyMarkup,
+        });
+        return;
+      }
+      
+      // 自慰 - 视频
+      if (data === 'masturbate_video') {
+        const text = getFeatureDetailText('自慰', 5, 20, false);
+        const replyMarkup = {
+          inline_keyboard: [
+            [{ text: '📤 上传图片', callback_data: 'upload_video_masturbate' }],
+            [{ text: '⬅️ 返回', callback_data: 'menu_masturbate' }],
+          ],
+        };
+        await bot.editMessageText(text, {
+          chat_id: chatId,
+          message_id: messageId,
+          reply_markup: replyMarkup,
+        });
+        return;
+      }
+      
+      // 颜射 - 图片
+      if (data === 'facial_image') {
+        const text = getFeatureDetailText('颜射', 5, 20, true);
+        const replyMarkup = {
+          inline_keyboard: [
+            [{ text: '📤 上传图片', callback_data: 'upload_image_facial' }],
+            [{ text: '⬅️ 返回', callback_data: 'menu_facial' }],
+          ],
+        };
+        await bot.editMessageText(text, {
+          chat_id: chatId,
+          message_id: messageId,
+          reply_markup: replyMarkup,
+        });
+        return;
+      }
+      
+      // 颜射 - 视频
+      if (data === 'facial_video') {
+        const text = getFeatureDetailText('颜射', 5, 20, false);
+        const replyMarkup = {
+          inline_keyboard: [
+            [{ text: '📤 上传图片', callback_data: 'upload_video_facial' }],
+            [{ text: '⬅️ 返回', callback_data: 'menu_facial' }],
+          ],
+        };
+        await bot.editMessageText(text, {
+          chat_id: chatId,
+          message_id: messageId,
+          reply_markup: replyMarkup,
+        });
+        return;
+      }
+      
+      // 口交 - 图片
+      if (data === 'oral_image') {
+        const text = getFeatureDetailText('口交', 5, 20, true);
+        const replyMarkup = {
+          inline_keyboard: [
+            [{ text: '📤 上传图片', callback_data: 'upload_image_oral' }],
+            [{ text: '⬅️ 返回', callback_data: 'menu_oral' }],
+          ],
+        };
+        await bot.editMessageText(text, {
+          chat_id: chatId,
+          message_id: messageId,
+          reply_markup: replyMarkup,
+        });
+        return;
+      }
+      
+      // 口交 - 视频
+      if (data === 'oral_video') {
+        const text = getFeatureDetailText('口交', 5, 20, false);
+        const replyMarkup = {
+          inline_keyboard: [
+            [{ text: '📤 上传图片', callback_data: 'upload_video_oral' }],
+            [{ text: '⬅️ 返回', callback_data: 'menu_oral' }],
+          ],
+        };
+        await bot.editMessageText(text, {
+          chat_id: chatId,
+          message_id: messageId,
+          reply_markup: replyMarkup,
+        });
+        return;
+      }
+      
+      // 手交 - 图片
+      if (data === 'handjob_image') {
+        const text = getFeatureDetailText('手交', 5, 20, true);
+        const replyMarkup = {
+          inline_keyboard: [
+            [{ text: '📤 上传图片', callback_data: 'upload_image_handjob' }],
+            [{ text: '⬅️ 返回', callback_data: 'menu_handjob' }],
+          ],
+        };
+        await bot.editMessageText(text, {
+          chat_id: chatId,
+          message_id: messageId,
+          reply_markup: replyMarkup,
+        });
+        return;
+      }
+      
+      // 手交 - 视频
+      if (data === 'handjob_video') {
+        const text = getFeatureDetailText('手交', 5, 20, false);
+        const replyMarkup = {
+          inline_keyboard: [
+            [{ text: '📤 上传图片', callback_data: 'upload_video_handjob' }],
+            [{ text: '⬅️ 返回', callback_data: 'menu_handjob' }],
+          ],
+        };
+        await bot.editMessageText(text, {
+          chat_id: chatId,
+          message_id: messageId,
+          reply_markup: replyMarkup,
+        });
+        return;
+      }
+      
+      // 性交 - 图片
+      if (data === 'sex_image') {
+        const text = getFeatureDetailText('性交', 5, 20, true);
+        const replyMarkup = {
+          inline_keyboard: [
+            [{ text: '📤 上传图片', callback_data: 'upload_image_sex' }],
+            [{ text: '⬅️ 返回', callback_data: 'menu_sex' }],
+          ],
+        };
+        await bot.editMessageText(text, {
+          chat_id: chatId,
+          message_id: messageId,
+          reply_markup: replyMarkup,
+        });
+        return;
+      }
+      
+      // 性交 - 视频
+      if (data === 'sex_video') {
+        const text = getFeatureDetailText('性交', 5, 20, false);
+        const replyMarkup = {
+          inline_keyboard: [
+            [{ text: '📤 上传图片', callback_data: 'upload_video_sex' }],
+            [{ text: '⬅️ 返回', callback_data: 'menu_sex' }],
+          ],
+        };
+        await bot.editMessageText(text, {
+          chat_id: chatId,
+          message_id: messageId,
+          reply_markup: replyMarkup,
+        });
+        return;
+      }
+      
+      // 处理上传图片按钮（检查积分和频道）
+      if (data.startsWith('upload_')) {
+        const parts = data.replace('upload_', '').split('_');
+        if (parts.length >= 2) {
+          const isVideo = parts[0] === 'video';
+          const pointsRequired = isVideo ? 20 : 5;
+          
+          // 简化版本：提示用户上传图片（实际应该检查积分和频道）
+          await bot.answerCallbackQuery(query.id, { text: '请上传图片' });
+          await bot.sendMessage(chatId, '✅ 请上传图片，我将为您处理。\n\n注意：实际使用时需要检查积分和频道关注状态。');
+        }
         return;
       }
       
