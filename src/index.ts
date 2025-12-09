@@ -24,6 +24,7 @@ import {
   getRechargeMenuKeyboard,
   getPaymentMethodKeyboard,
   getConfirmRechargeKeyboard,
+  getText2ImageDetailText,
 } from '../lib/menu';
 
 /**
@@ -307,7 +308,97 @@ async function handleTelegramUpdate(bot: TelegramBot, update: any, env: Env): Pr
       // 处理其他文本消息
       else if (msg.text) {
         console.log('处理文本消息:', msg.text);
-        await bot.sendMessage(chatId, `你发送了: ${msg.text}`);
+        
+        // 检查是否是命令
+        if (msg.text.startsWith('/')) {
+          await bot.sendMessage(chatId, `你发送了命令: ${msg.text}`);
+          return;
+        }
+        
+        // 检查是否是文生图模式（简单判断：如果用户发送的文本不是命令，且长度合理，可能是提示词）
+        // 这里简化处理：如果文本长度大于5且不是命令，就认为是文生图提示词
+        // 实际应该使用状态管理来跟踪用户是否处于文生图模式
+        const text = msg.text.trim();
+        if (text.length > 5 && text.length < 500) {
+          // 尝试作为文生图提示词处理
+          try {
+            if (!userId) {
+              await bot.sendMessage(chatId, '无法获取用户信息，请重试。');
+              return;
+            }
+            
+            // 获取用户信息
+            const dbUser = await getUserByTelegramId(BigInt(userId));
+            if (!dbUser) {
+              await bot.sendMessage(chatId, '请先使用 /start 命令开始使用机器人。');
+              return;
+            }
+            
+            // 检查是否关注官方频道
+            const channelId = env.OFFICIAL_CHANNEL_ID || '';
+            if (channelId) {
+              try {
+                const member = await bot.getChatMember(channelId, userId);
+                const isSubscribed = ['member', 'administrator', 'creator'].includes(member.status);
+                if (!isSubscribed) {
+                  await bot.sendMessage(
+                    chatId,
+                    `❌ 请先关注官方频道才能使用此功能！\n\n官方频道：${channelId}\n关注后请重新输入描述。`
+                  );
+                  return;
+                }
+              } catch (error) {
+                console.error(`检查频道关注状态失败: ${error}`);
+              }
+            }
+            
+            // 检查用户积分（文生图，5积分）
+            const pointsRequired = 5;
+            if (dbUser.points < pointsRequired) {
+              await bot.sendMessage(
+                chatId,
+                `❌ 你的积分不足。当前积分：${dbUser.points}，需要积分：${pointsRequired}，请先获取足够积分`
+              );
+              return;
+            }
+            
+            // 扣除积分
+            const success = await deductPoints(dbUser, pointsRequired);
+            if (!success) {
+              await bot.sendMessage(
+                chatId,
+                `❌ 积分扣除失败。当前积分：${dbUser.points}，需要积分：${pointsRequired}`
+              );
+              return;
+            }
+            
+            // 创建订单
+            const order = await createOrder(BigInt(userId), OrderType.IMAGE, pointsRequired);
+            
+            await bot.sendMessage(
+              chatId,
+              `✅ 提示词接收成功，订单号：${order.orderNo}\n\n📝 您的提示词：${text}\n\n正在根据您的描述生成图片，请稍候...`
+            );
+            
+            // TODO: 调用文生图API处理提示词
+            // 这里应该调用实际的文生图API服务
+            
+            // 暂时模拟处理
+            await bot.sendMessage(
+              chatId,
+              `⚠️ 文生图功能待实现\n订单号：${order.orderNo}\n提示词：${text}\n已扣除积分：${pointsRequired}\n剩余积分：${dbUser.points - pointsRequired}`
+            );
+            
+            console.log(`文生图处理完成 - 订单号: ${order.orderNo}, 用户ID: ${userId}, 提示词: ${text}`);
+            return;
+          } catch (error) {
+            console.error(`处理文生图提示词失败 - 用户ID: ${userId}, 错误: ${error}`);
+            // 如果处理失败，继续普通文本处理
+          }
+        }
+        
+        // 普通文本消息处理
+        await bot.sendMessage(chatId, `你发送了: ${msg.text}\n\n💡 提示：如果您想使用文生图功能，请通过菜单选择"脱衣" -> "文生图"。`);
       }
     }
     // 处理回调查询
@@ -356,7 +447,7 @@ async function handleTelegramUpdate(bot: TelegramBot, update: any, env: Env): Pr
       // 脱衣菜单
       if (data === 'menu_strip') {
         await bot.editMessageText(
-          '👗 脱衣功能：\n\n🖼️ 图片脱衣：5积分/图片\n🎬 视频脱衣：20积分/视频',
+          '👗 脱衣功能：\n\n🖼️ 图片脱衣：5积分/图片\n🎬 视频脱衣：20积分/视频\n✨ 文生图：5积分/图片',
           {
             chat_id: chatId,
             message_id: messageId,
@@ -463,6 +554,23 @@ async function handleTelegramUpdate(bot: TelegramBot, update: any, env: Env): Pr
         const replyMarkup = {
           inline_keyboard: [
             [{ text: '📤 上传图片', callback_data: 'upload_video_strip' }],
+            [{ text: '⬅️ 返回', callback_data: 'menu_strip' }],
+          ],
+        };
+        await bot.editMessageText(text, {
+          chat_id: chatId,
+          message_id: messageId,
+          reply_markup: replyMarkup,
+        });
+        return;
+      }
+      
+      // 文生图
+      if (data === 'strip_text2image') {
+        const text = getText2ImageDetailText('脱衣', 5);
+        const replyMarkup = {
+          inline_keyboard: [
+            [{ text: '📤 开始生成', callback_data: 'upload_text2image_strip' }],
             [{ text: '⬅️ 返回', callback_data: 'menu_strip' }],
           ],
         };
@@ -682,6 +790,73 @@ async function handleTelegramUpdate(bot: TelegramBot, update: any, env: Env): Pr
       if (data.startsWith('upload_')) {
         const parts = data.replace('upload_', '').split('_');
         if (parts.length >= 2) {
+          // 处理文生图
+          if (parts[0] === 'text2image') {
+            const featureType = parts[1]; // strip, breast, etc.
+            const pointsRequired = 5;
+            
+            // 获取用户信息
+            const dbUser = await getUserByTelegramId(BigInt(userId));
+            if (!dbUser) {
+              await bot.answerCallbackQuery(query.id, { text: '请先使用 /start 命令开始使用机器人。' });
+              return;
+            }
+            
+            // 检查积分
+            if (dbUser.points < pointsRequired) {
+              await bot.answerCallbackQuery(query.id, { 
+                text: `你的积分不足。当前积分：${dbUser.points}，需要积分：${pointsRequired}，请先获取足够积分`,
+                show_alert: true 
+              });
+              return;
+            }
+            
+            // 检查是否关注官方频道
+            const channelId = env.OFFICIAL_CHANNEL_ID || '';
+            if (channelId) {
+              try {
+                const member = await bot.getChatMember(channelId, userId);
+                const isSubscribed = ['member', 'administrator', 'creator'].includes(member.status);
+                if (!isSubscribed) {
+                  await bot.answerCallbackQuery(query.id, { 
+                    text: `请先关注官方频道才能使用此功能！\n官方频道：${channelId}`,
+                    show_alert: true 
+                  });
+                  return;
+                }
+              } catch (error) {
+                console.error(`检查频道关注状态失败: ${error}`);
+              }
+            }
+            
+            // 积分和频道检查通过，提示用户输入文本提示词
+            await bot.answerCallbackQuery(query.id, { text: '请输入图片描述' });
+            
+            // 发送清晰的提示信息
+            const promptText = `✨ 文生图功能
+
+✅ 检查通过，您可以开始输入图片描述了！
+
+📝 操作步骤：
+1. 在输入框中输入您想要生成的图片描述（提示词）
+2. 例如："一个美丽的女孩，长发，穿着白色连衣裙"
+3. 发送给我，系统将根据您的描述生成图片
+
+💡 提示词建议：
+• 描述要清晰具体
+• 可以包含场景、人物特征、服装等描述
+• 建议描述：站立，单人，无遮挡，主体人物清晰的照片
+
+💰 处理需要：${pointsRequired}积分
+• 处理完成后会自动扣除积分
+
+⏳ 我正在等待您的图片描述...`;
+            
+            await bot.sendMessage(chatId, promptText);
+            return;
+          }
+          
+          // 处理图片/视频上传
           const isVideo = parts[0] === 'video';
           const featureType = parts[1]; // strip, breast, masturbate, etc.
           const pointsRequired = isVideo ? 20 : 5;

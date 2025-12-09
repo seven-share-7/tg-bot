@@ -143,10 +143,47 @@ export function getStripMenuKeyboard(): InlineKeyboardMarkup {
         { text: '🎬 视频脱衣', callback_data: 'strip_video' },
       ],
       [
+        { text: '✨ 文生图', callback_data: 'strip_text2image' },
+      ],
+      [
         { text: '⬅️ 返回功能菜单', callback_data: 'menu_channel' },
       ],
     ],
   };
+}
+
+/**
+ * 生成文生图功能详情页面文本
+ * 
+ * @param {string} featureName - 功能名称
+ * @param {number} points - 所需积分
+ * @return {string} 功能详情文本
+ * @author seven
+ * @since 2025-11-28
+ */
+export function getText2ImageDetailText(featureName: string, points: number): string {
+  const uploadSuggestion = '站立，单人，无遮挡，主体人物清晰的照片无奇怪动作姿势';
+  const channelName = '【NSFW】官方功能更新频道';
+  
+  return `✨ ${featureName}文生图：${points}积分/图片
+
+⚠️ 注意事项：
+使用我们的服务即表示您同意，用户协议且不得用于非法用途。
+
+📝 使用说明：
+1. 点击"开始生成"按钮
+2. 输入您想要生成的图片描述（提示词）
+3. 系统将根据您的描述生成图片
+
+💡 提示词建议：
+• 描述要清晰具体，例如："一个美丽的女孩，长发，穿着白色连衣裙"
+• 可以包含场景、人物特征、服装等描述
+• 建议描述：${uploadSuggestion}
+
+👀 效果预览 (${channelName})
+❌ 如果没有关注官方频道 机器人不会出图！
+
+📤 【菜单】开始生成`;
 }
 
 /**

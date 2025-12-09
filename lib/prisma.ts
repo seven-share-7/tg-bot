@@ -21,6 +21,22 @@ declare global {
 export let prisma: PrismaClient | any;
 
 /**
+ * 获取全局对象（兼容 Node.js 和 Cloudflare Workers）
+ */
+function getGlobal(): any {
+  // Cloudflare Workers 环境
+  if (typeof globalThis !== 'undefined') {
+    return globalThis;
+  }
+  // Node.js 环境
+  if (typeof global !== 'undefined') {
+    return global;
+  }
+  // 其他环境
+  return {};
+}
+
+/**
  * 初始化数据库连接
  * 
  * @param {D1Database} d1 - Cloudflare D1 数据库实例（仅在 Workers 环境中需要）
@@ -30,9 +46,11 @@ export let prisma: PrismaClient | any;
  */
 export async function initDatabase(d1?: D1Database): Promise<void> {
   try {
+    const globalObj = getGlobal();
+    
     // 如果已经初始化过，直接返回
-    if (global.prisma) {
-      prisma = global.prisma;
+    if (globalObj.prisma) {
+      prisma = globalObj.prisma;
       console.log('使用已存在的数据库连接');
       return;
     }
@@ -42,7 +60,7 @@ export async function initDatabase(d1?: D1Database): Promise<void> {
     // 在 Cloudflare Workers 环境中，使用 D1 Adapter
     if (d1) {
       console.log('检测到 D1 数据库绑定，使用 D1 Adapter');
-      global.d1Database = d1;
+      globalObj.d1Database = d1;
       
       const adapter = new PrismaD1(d1);
       // @ts-ignore - PrismaClient with adapter type compatibility
@@ -63,11 +81,23 @@ export async function initDatabase(d1?: D1Database): Promise<void> {
     }
     
     // 缓存实例
-    global.prisma = prisma;
+    globalObj.prisma = prisma;
     
     // 测试数据库连接
-    await prisma.$connect();
-    console.log('数据库连接成功');
+    // 注意：在 Cloudflare Workers 环境中使用 D1 Adapter 时，不需要调用 $connect()
+    if (d1) {
+      // Workers 环境：D1 是异步的，不需要连接
+      console.log('数据库连接初始化完成（D1 Adapter）');
+    } else {
+      // 本地环境：需要连接
+      try {
+        await prisma.$connect();
+        console.log('数据库连接成功');
+      } catch (connectError) {
+        console.error('数据库连接失败:', connectError);
+        throw connectError;
+      }
+    }
   } catch (error) {
     console.error('数据库初始化失败:', error);
     throw error;

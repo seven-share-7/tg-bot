@@ -20,6 +20,7 @@ import {
   getRechargeMenuKeyboard,
   getPaymentMethodKeyboard,
   getConfirmRechargeKeyboard,
+  getText2ImageDetailText,
 } from '@/lib/menu';
 import { getUserByTelegramId } from '@/services/userService';
 import { createPayment, updatePaymentUrl } from '@/services/paymentService';
@@ -101,7 +102,7 @@ export async function handleCallbackQuery(
     // 脱衣菜单
     if (data === 'menu_strip') {
       await bot.editMessageText(
-        '👗 脱衣功能：\n\n🖼️ 图片脱衣：5积分/图片\n🎬 视频脱衣：20积分/视频',
+        '👗 脱衣功能：\n\n🖼️ 图片脱衣：5积分/图片\n🎬 视频脱衣：20积分/视频\n✨ 文生图：5积分/图片',
         {
           chat_id: query.message.chat.id,
           message_id: query.message.message_id,
@@ -525,6 +526,23 @@ ${referralLink}
       return;
     }
     
+    // 文生图
+    if (data === 'strip_text2image') {
+      const text = getText2ImageDetailText('脱衣', 5);
+      const replyMarkup = {
+        inline_keyboard: [
+          [{ text: '📤 开始生成', callback_data: 'upload_text2image_strip' }],
+          [{ text: '⬅️ 返回', callback_data: 'menu_strip' }],
+        ],
+      };
+      await bot.editMessageText(text, {
+        chat_id: query.message.chat.id,
+        message_id: query.message.message_id,
+        reply_markup: replyMarkup,
+      });
+      return;
+    }
+    
     // 胸部爱抚 - 图片
     if (data === 'breast_image') {
       const text = getFeatureDetailText('胸部爱抚', 5, 20, true);
@@ -733,6 +751,66 @@ ${referralLink}
     if (data.startsWith('upload_')) {
       const parts = data.replace('upload_', '').split('_');
       if (parts.length >= 2) {
+        // 处理文生图
+        if (parts[0] === 'text2image') {
+          const featureType = parts[1]; // strip, breast, etc.
+          const pointsRequired = 5;
+          
+          // 获取用户信息
+          const dbUser = await getUserByTelegramId(BigInt(userId));
+          if (!dbUser) {
+            await bot.answerCallbackQuery(query.id, { text: '请先使用 /start 命令开始使用机器人。' });
+            return;
+          }
+          
+          // 检查积分
+          if (dbUser.points < pointsRequired) {
+            await bot.answerCallbackQuery(query.id, { 
+              text: `你的积分不足。当前积分：${dbUser.points}，需要积分：${pointsRequired}，请先获取足够积分`,
+              show_alert: true 
+            });
+            return;
+          }
+          
+          // 检查是否关注官方频道
+          const isSubscribed = await checkUserSubscribed(bot, userId);
+          if (!isSubscribed) {
+            const channelId = config.officialChannelId || '@your_official_channel';
+            await bot.answerCallbackQuery(query.id, { 
+              text: `请先关注官方频道才能使用此功能！\n官方频道：${channelId}`,
+              show_alert: true 
+            });
+            return;
+          }
+          
+          // 积分和频道检查通过，提示用户输入文本提示词
+          await bot.answerCallbackQuery(query.id, { text: '请输入图片描述' });
+          
+          // 发送清晰的提示信息
+          const promptText = `✨ 文生图功能
+
+✅ 检查通过，您可以开始输入图片描述了！
+
+📝 操作步骤：
+1. 在输入框中输入您想要生成的图片描述（提示词）
+2. 例如："一个美丽的女孩，长发，穿着白色连衣裙"
+3. 发送给我，系统将根据您的描述生成图片
+
+💡 提示词建议：
+• 描述要清晰具体
+• 可以包含场景、人物特征、服装等描述
+• 建议描述：站立，单人，无遮挡，主体人物清晰的照片
+
+💰 处理需要：${pointsRequired}积分
+• 处理完成后会自动扣除积分
+
+⏳ 我正在等待您的图片描述...`;
+          
+          await bot.sendMessage(query.message.chat.id, promptText);
+          return;
+        }
+        
+        // 处理图片/视频上传
         const isVideo = parts[0] === 'video';
         const featureType = parts[1]; // strip, breast, masturbate, etc.
         const pointsRequired = isVideo ? 20 : 5;
