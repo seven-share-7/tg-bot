@@ -74,14 +74,15 @@ export async function initDatabase(d1?: D1Database): Promise<void> {
     console.log('初始化数据库连接...');
     
     // 在 Cloudflare Workers 环境中，使用 D1 Adapter
+    // 只要传入了 d1 参数，就使用 D1 Adapter（包括 wrangler dev 环境）
     if (d1) {
       console.log('检测到 D1 数据库绑定，使用 D1 Adapter');
       globalObj.d1Database = d1;
-      
+
       // 动态导入 Prisma 模块，避免在模块加载时实例化
       const { PrismaClient } = await import('@prisma/client');
       const { PrismaD1 } = await import('@prisma/adapter-d1');
-      
+
       // 在 Workers 环境中，每次调用都重新创建实例
       // 因为 ctx.waitUntil 中的代码可能在不同的执行上下文中运行
       const adapter = new PrismaD1(d1);
@@ -91,12 +92,14 @@ export async function initDatabase(d1?: D1Database): Promise<void> {
         adapter,
         log: ['error', 'warn'],
       });
-      
+
       // 缓存实例（虽然可能不会在跨上下文共享，但保留以便调试）
       globalObj.prisma = prisma;
       console.log('数据库连接初始化完成（D1 Adapter）');
+      return; // 重要：这里要 return，避免继续执行下面的本地环境逻辑
     }
-    // 本地开发环境，使用标准 SQLite 连接
+
+    // 本地开发环境（没有传入 d1 参数时），使用标准 SQLite 连接
     else {
       // 本地环境：如果已经初始化过，直接返回
       if (globalObj.prisma) {
