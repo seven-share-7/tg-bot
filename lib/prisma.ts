@@ -4,12 +4,14 @@
  * @author seven
  * @since 2025-11-28
  */
-import { PrismaClient } from '@prisma/client';
-import { PrismaD1 } from '@prisma/adapter-d1';
+// 使用动态导入避免在模块加载时实例化 PrismaClient
+// 这在 Cloudflare Workers 环境中很重要
+type PrismaClientType = typeof import('@prisma/client').PrismaClient;
+type PrismaD1Type = typeof import('@prisma/adapter-d1').PrismaD1;
 
 // 全局类型定义，支持 D1 数据库绑定
 declare global {
-  var prisma: PrismaClient | undefined;
+  var prisma: any;
   var d1Database: D1Database | undefined;
 }
 
@@ -18,18 +20,18 @@ declare global {
  * 在 Cloudflare Workers 环境中使用 D1 Adapter
  * 在本地开发环境中使用标准 SQLite 连接
  */
-let prisma: PrismaClient | any;
+let prisma: any;
 
 /**
  * 获取 Prisma 客户端实例
  * 确保在使用前已经初始化
  * 
- * @return {PrismaClient} Prisma 客户端实例
+ * @return {any} Prisma 客户端实例
  * @throws {Error} 如果 prisma 未初始化
  * @author seven
  * @since 2025-11-28
  */
-export function getPrisma(): PrismaClient {
+export function getPrisma(): any {
   if (!prisma) {
     throw new Error('Prisma Client 未初始化。请先调用 initDatabase() 函数。');
   }
@@ -77,6 +79,10 @@ export async function initDatabase(d1?: D1Database): Promise<void> {
       console.log('检测到 D1 数据库绑定，使用 D1 Adapter');
       globalObj.d1Database = d1;
       
+      // 动态导入 Prisma 模块，避免在模块加载时实例化
+      const { PrismaClient } = await import('@prisma/client');
+      const { PrismaD1 } = await import('@prisma/adapter-d1');
+      
       // 在 Workers 环境中，每次调用都重新创建实例
       // 因为 ctx.waitUntil 中的代码可能在不同的执行上下文中运行
       const adapter = new PrismaD1(d1);
@@ -101,6 +107,9 @@ export async function initDatabase(d1?: D1Database): Promise<void> {
       }
       
       console.log('本地开发环境，使用标准 SQLite 连接');
+      // 动态导入 Prisma 模块
+      const { PrismaClient } = await import('@prisma/client');
+      
       prisma = new PrismaClient({
         log: process.env.NODE_ENV === 'development' 
           ? ['query', 'error', 'warn'] 
