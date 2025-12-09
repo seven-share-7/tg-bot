@@ -9,6 +9,7 @@ import { initDatabase } from '../lib/prisma';
 import { getUserByTelegramId, deductPoints } from '../services/userService';
 import { createOrder } from '../services/orderService';
 import { generateImage } from '../services/runpodService';
+import { uploadImageToR2, getR2PublicUrl, getImageFromR2 } from '../services/r2Service';
 import { OrderType } from '../lib/constants';
 import { 
   DISCLAIMER_MESSAGE, 
@@ -34,6 +35,9 @@ import {
 export interface Env {
   // D1 数据库绑定
   DB: D1Database;
+  
+  // R2 存储绑定
+  R2_STORAGE: R2Bucket;
   
   // 环境变量
   BOT_TOKEN: string;
@@ -78,6 +82,9 @@ export interface Env {
   // RunPod 配置
   RUNPOD_API_KEY?: string;
   RUNPOD_ENDPOINT_ID?: string;
+  
+  // R2 配置
+  R2_PUBLIC_URL?: string; // R2 公共访问 URL（如果配置了自定义域名）
 }
 
 /**
@@ -443,15 +450,62 @@ async function handleTelegramUpdate(bot: TelegramBot, update: any, env: Env): Pr
                 throw new Error('图片生成失败，未返回图片数据');
               }
               
-              // 发送生成的图片
+              // 配置 R2 存储
+              const r2Config = {
+                bucket: env.R2_STORAGE,
+                prefix: 'tg-bot',
+                publicUrl: env.R2_PUBLIC_URL,
+              };
+              
+              // 上传图片到 R2 并发送
               for (let i = 0; i < imageBuffers.length; i++) {
                 const imageBuffer = imageBuffers[i];
-                const caption = i === 0 
-                  ? `✅ 图片生成成功！\n订单号：${order.orderNo}\n提示词：${text}\n已扣除积分：${pointsRequired}\n剩余积分：${dbUser.points - pointsRequired}`
-                  : '';
                 
-                await bot.sendPhotoBuffer(chatId, imageBuffer, { caption });
-                console.log(`图片发送成功 - 订单号: ${order.orderNo}, 图片 ${i + 1}/${imageBuffers.length}`);
+                try {
+                  // 生成文件名（包含订单号和索引）
+                  const filename = `order-${order.orderNo}-${i + 1}.png`;
+                  
+                  // 上传到 R2
+                  console.log(`上传图片到 R2 - 订单号: ${order.orderNo}, 图片 ${i + 1}/${imageBuffers.length}`);
+                  const r2Key = await uploadImageToR2(r2Config, imageBuffer, filename);
+                  console.log(`图片上传到 R2 成功 - Key: ${r2Key}`);
+                  
+                  // 获取 R2 公共 URL
+                  let imageUrl: string;
+                  try {
+                    imageUrl = getR2PublicUrl(r2Config, r2Key);
+                  } catch (urlError) {
+                    // 如果无法获取公共 URL，尝试从 R2 获取图片数据并直接发送
+                    console.warn(`无法获取 R2 公共 URL，尝试直接发送图片数据 - 错误: ${urlError}`);
+                    const imageData = await getImageFromR2(r2Config, r2Key);
+                    if (imageData) {
+                      const caption = i === 0 
+                        ? `✅ 图片生成成功！\n订单号：${order.orderNo}\n提示词：${text}\n已扣除积分：${pointsRequired}\n剩余积分：${dbUser.points - pointsRequired}`
+                        : '';
+                      await bot.sendPhotoBuffer(chatId, imageData, { caption });
+                      console.log(`图片发送成功（直接发送） - 订单号: ${order.orderNo}, 图片 ${i + 1}/${imageBuffers.length}`);
+                      continue;
+                    } else {
+                      throw new Error('无法从 R2 获取图片数据');
+                    }
+                  }
+                  
+                  // 使用 R2 URL 发送图片
+                  const caption = i === 0 
+                    ? `✅ 图片生成成功！\n订单号：${order.orderNo}\n提示词：${text}\n已扣除积分：${pointsRequired}\n剩余积分：${dbUser.points - pointsRequired}`
+                    : '';
+                  
+                  await bot.sendPhoto(chatId, imageUrl, { caption });
+                  console.log(`图片发送成功（使用 R2 URL） - 订单号: ${order.orderNo}, 图片 ${i + 1}/${imageBuffers.length}, URL: ${imageUrl}`);
+                } catch (uploadError) {
+                  console.error(`上传图片到 R2 失败，尝试直接发送 - 订单号: ${order.orderNo}, 错误: ${uploadError}`);
+                  // 如果上传失败，尝试直接发送图片
+                  const caption = i === 0 
+                    ? `✅ 图片生成成功！\n订单号：${order.orderNo}\n提示词：${text}\n已扣除积分：${pointsRequired}\n剩余积分：${dbUser.points - pointsRequired}\n\n⚠️ 注意：图片未保存到存储，请及时保存。`
+                    : '';
+                  await bot.sendPhotoBuffer(chatId, imageBuffer, { caption });
+                  console.log(`图片发送成功（直接发送，未上传 R2） - 订单号: ${order.orderNo}, 图片 ${i + 1}/${imageBuffers.length}`);
+                }
               }
               
               console.log(`文生图处理完成 - 订单号: ${order.orderNo}, 用户ID: ${userId}, 提示词: ${text}, 图片数量: ${imageBuffers.length}`);

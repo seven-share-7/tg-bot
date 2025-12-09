@@ -19,6 +19,13 @@ binding = "DB"
 database_name = "tg-bot-db"
 database_id = "76e2bd8b-2e12-42d3-bec5-3f26112b2785"
 
+# R2 存储绑定
+# 使用 wrangler r2 bucket create tg-bot-storage 创建存储桶后，更新 bucket_name
+[[r2_buckets]]
+binding = "R2_STORAGE"
+bucket_name = "tg-bot-storage"
+preview_bucket_name = "tg-bot-storage-preview"
+
 # 环境变量（非敏感信息）
 # 敏感信息（Token、密钥等）应在 Cloudflare Dashboard 中设置为 Secret
 [vars]
