@@ -48,13 +48,6 @@ export async function initDatabase(d1?: D1Database): Promise<void> {
   try {
     const globalObj = getGlobal();
     
-    // 如果已经初始化过，直接返回
-    if (globalObj.prisma) {
-      prisma = globalObj.prisma;
-      console.log('使用已存在的数据库连接');
-      return;
-    }
-    
     console.log('初始化数据库连接...');
     
     // 在 Cloudflare Workers 环境中，使用 D1 Adapter
@@ -62,6 +55,8 @@ export async function initDatabase(d1?: D1Database): Promise<void> {
       console.log('检测到 D1 数据库绑定，使用 D1 Adapter');
       globalObj.d1Database = d1;
       
+      // 在 Workers 环境中，每次调用都重新创建实例
+      // 因为 ctx.waitUntil 中的代码可能在不同的执行上下文中运行
       const adapter = new PrismaD1(d1);
       // @ts-ignore - PrismaClient with adapter type compatibility
       prisma = new PrismaClient({
@@ -69,30 +64,37 @@ export async function initDatabase(d1?: D1Database): Promise<void> {
         adapter,
         log: ['error', 'warn'],
       });
+      
+      // 缓存实例（虽然可能不会在跨上下文共享，但保留以便调试）
+      globalObj.prisma = prisma;
+      console.log('数据库连接初始化完成（D1 Adapter）');
     }
     // 本地开发环境，使用标准 SQLite 连接
     else {
+      // 本地环境：如果已经初始化过，直接返回
+      if (globalObj.prisma) {
+        prisma = globalObj.prisma;
+        console.log('使用已存在的数据库连接（本地环境）');
+        return;
+      }
+      
       console.log('本地开发环境，使用标准 SQLite 连接');
       prisma = new PrismaClient({
         log: process.env.NODE_ENV === 'development' 
           ? ['query', 'error', 'warn'] 
           : ['error'],
       });
-    }
-    
-    // 缓存实例
-    globalObj.prisma = prisma;
+      
+      // 缓存实例
+      globalObj.prisma = prisma;
     
     // 测试数据库连接
     // 注意：在 Cloudflare Workers 环境中使用 D1 Adapter 时，不需要调用 $connect()
-    if (d1) {
-      // Workers 环境：D1 是异步的，不需要连接
-      console.log('数据库连接初始化完成（D1 Adapter）');
-    } else {
+    if (!d1) {
       // 本地环境：需要连接
       try {
         await prisma.$connect();
-        console.log('数据库连接成功');
+        console.log('数据库连接成功（本地环境）');
       } catch (connectError) {
         console.error('数据库连接失败:', connectError);
         throw connectError;

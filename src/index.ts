@@ -253,6 +253,16 @@ class TelegramBot {
 async function handleTelegramUpdate(bot: TelegramBot, update: any, env: Env): Promise<void> {
   console.log('收到 Telegram 更新:', JSON.stringify(update, null, 2));
   
+  // 在 Workers 环境中，每个异步执行上下文都需要重新初始化数据库
+  // 因为 ctx.waitUntil 中的代码可能在不同的上下文中执行
+  try {
+    await initDatabase(env.DB);
+    console.log('数据库连接已初始化（handleTelegramUpdate）');
+  } catch (dbError) {
+    console.error('初始化数据库失败（handleTelegramUpdate）:', dbError);
+    // 如果初始化失败，继续执行，但数据库操作可能会失败
+  }
+  
   try {
     // 处理消息
     if (update.message) {
