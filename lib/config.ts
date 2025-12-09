@@ -70,6 +70,12 @@ export const config = {
     apiKey: process.env.IMAGE_GENERATION_API_KEY || '',
   },
   
+  // RunPod API 配置
+  runpod: {
+    apiKey: process.env.RUNPOD_API_KEY || '',
+    endpointId: process.env.RUNPOD_ENDPOINT_ID || '',
+  },
+  
   // 视频生成API配置
   videoGeneration: {
     apiUrl: process.env.VIDEO_GENERATION_API_URL || '',

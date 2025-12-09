@@ -8,6 +8,7 @@
 import { initDatabase } from '../lib/prisma';
 import { getUserByTelegramId, deductPoints } from '../services/userService';
 import { createOrder } from '../services/orderService';
+import { generateImage } from '../services/runpodService';
 import { OrderType } from '../lib/constants';
 import { 
   DISCLAIMER_MESSAGE, 
@@ -73,6 +74,10 @@ export interface Env {
   // 功能配置
   UPLOAD_SUGGESTION?: string;
   OFFICIAL_CHANNEL_NAME?: string;
+  
+  // RunPod 配置
+  RUNPOD_API_KEY?: string;
+  RUNPOD_ENDPOINT_ID?: string;
 }
 
 /**
@@ -186,6 +191,46 @@ class TelegramBot {
       video,
       ...options,
     });
+  }
+
+  /**
+   * 发送照片（支持 Uint8Array）
+   */
+  async sendPhotoBuffer(chatId: number | string, photoBuffer: Uint8Array, options: any = {}): Promise<any> {
+    // 在 Workers 环境中，使用 FormData 发送图片
+    const formData = new FormData();
+    const blob = new Blob([photoBuffer], { type: 'image/png' });
+    formData.append('chat_id', String(chatId));
+    formData.append('photo', blob, 'generated.png');
+    
+    if (options.caption) {
+      formData.append('caption', options.caption);
+    }
+    
+    const url = `${this.apiUrl}/sendPhoto`;
+    console.log(`发送图片到 Telegram - Chat ID: ${chatId}`);
+    
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.token}`,
+        },
+        body: formData,
+      });
+
+      const data: any = await response.json();
+      
+      if (!data.ok) {
+        console.error(`Telegram API 错误: sendPhoto`, data);
+        throw new Error(`Telegram API error: ${data.description || 'Unknown error'}`);
+      }
+
+      return data.result;
+    } catch (error) {
+      console.error(`发送图片失败: sendPhoto`, error);
+      throw error;
+    }
   }
 }
 
@@ -380,16 +425,44 @@ async function handleTelegramUpdate(bot: TelegramBot, update: any, env: Env): Pr
               `✅ 提示词接收成功，订单号：${order.orderNo}\n\n📝 您的提示词：${text}\n\n正在根据您的描述生成图片，请稍候...`
             );
             
-            // TODO: 调用文生图API处理提示词
-            // 这里应该调用实际的文生图API服务
+            // 调用 RunPod API 生成图片
+            try {
+              const runpodConfig = {
+                apiKey: env.RUNPOD_API_KEY || '',
+                endpointId: env.RUNPOD_ENDPOINT_ID || '',
+              };
+              
+              if (!runpodConfig.apiKey || !runpodConfig.endpointId) {
+                throw new Error('RunPod API 配置未设置，请在环境变量中配置 RUNPOD_API_KEY 和 RUNPOD_ENDPOINT_ID');
+              }
+              
+              console.log(`调用 RunPod API 生成图片 - 提示词: ${text}`);
+              const imageBuffers = await generateImage(runpodConfig, text);
+              
+              if (imageBuffers.length === 0) {
+                throw new Error('图片生成失败，未返回图片数据');
+              }
+              
+              // 发送生成的图片
+              for (let i = 0; i < imageBuffers.length; i++) {
+                const imageBuffer = imageBuffers[i];
+                const caption = i === 0 
+                  ? `✅ 图片生成成功！\n订单号：${order.orderNo}\n提示词：${text}\n已扣除积分：${pointsRequired}\n剩余积分：${dbUser.points - pointsRequired}`
+                  : '';
+                
+                await bot.sendPhotoBuffer(chatId, imageBuffer, { caption });
+                console.log(`图片发送成功 - 订单号: ${order.orderNo}, 图片 ${i + 1}/${imageBuffers.length}`);
+              }
+              
+              console.log(`文生图处理完成 - 订单号: ${order.orderNo}, 用户ID: ${userId}, 提示词: ${text}, 图片数量: ${imageBuffers.length}`);
+            } catch (error) {
+              console.error(`调用 RunPod API 失败 - 订单号: ${order.orderNo}, 错误: ${error}`);
+              await bot.sendMessage(
+                chatId,
+                `❌ 图片生成失败\n订单号：${order.orderNo}\n错误：${error instanceof Error ? error.message : '未知错误'}\n\n已扣除的积分将不会退回，请稍后重试或联系客服。`
+              );
+            }
             
-            // 暂时模拟处理
-            await bot.sendMessage(
-              chatId,
-              `⚠️ 文生图功能待实现\n订单号：${order.orderNo}\n提示词：${text}\n已扣除积分：${pointsRequired}\n剩余积分：${dbUser.points - pointsRequired}`
-            );
-            
-            console.log(`文生图处理完成 - 订单号: ${order.orderNo}, 用户ID: ${userId}, 提示词: ${text}`);
             return;
           } catch (error) {
             console.error(`处理文生图提示词失败 - 用户ID: ${userId}, 错误: ${error}`);
@@ -804,7 +877,7 @@ async function handleTelegramUpdate(bot: TelegramBot, update: any, env: Env): Pr
             
             // 检查积分
             if (dbUser.points < pointsRequired) {
-              await bot.answerCallbackQuery(query.id, { 
+      await bot.answerCallbackQuery(query.id, {
                 text: `你的积分不足。当前积分：${dbUser.points}，需要积分：${pointsRequired}，请先获取足够积分`,
                 show_alert: true 
               });

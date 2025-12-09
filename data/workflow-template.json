@@ -1,0 +1,413 @@
+{
+    "1": {
+      "inputs": {
+        "ckpt_name": "huslyorealismxl_v2.safetensors"
+      },
+      "class_type": "CheckpointLoaderSimple",
+      "_meta": {
+        "title": "Checkpoint加载器（简易）"
+      }
+    },
+    "2": {
+      "inputs": {
+        "stop_at_clip_layer": -2,
+        "clip": [
+          "1",
+          1
+        ]
+      },
+      "class_type": "CLIPSetLastLayer",
+      "_meta": {
+        "title": "设置CLIP最后一层"
+      }
+    },
+    "3": {
+      "inputs": {
+        "text": "{{PROMPT}}",
+        "clip": [
+          "21",
+          1
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIP文本编码"
+      }
+    },
+    "4": {
+      "inputs": {
+        "text": "cartoon, illustration, anime, painting, CGI, 3D render, low quality, watermark, logo, label",
+        "clip": [
+          "2",
+          0
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIP文本编码"
+      }
+    },
+    "6": {
+      "inputs": {
+        "width": 768,
+        "height": 1152,
+        "batch_size": 1
+      },
+      "class_type": "EmptyLatentImage",
+      "_meta": {
+        "title": "空Latent图像"
+      }
+    },
+    "7": {
+      "inputs": {
+        "samples": [
+          "10",
+          3
+        ],
+        "vae": [
+          "9",
+          0
+        ]
+      },
+      "class_type": "VAEDecode",
+      "_meta": {
+        "title": "VAE解码"
+      }
+    },
+    "8": {
+      "inputs": {
+        "filename_prefix": "ComfyUI",
+        "images": [
+          "36",
+          0
+        ]
+      },
+      "class_type": "SaveImage",
+      "_meta": {
+        "title": "保存图像"
+      }
+    },
+    "9": {
+      "inputs": {
+        "vae_name": "SDXL/sdxl_vae.safetensors"
+      },
+      "class_type": "VAELoader",
+      "_meta": {
+        "title": "加载VAE"
+      }
+    },
+    "10": {
+      "inputs": {
+        "seed": 856687343819439,
+        "steps": 32,
+        "cfg": 4,
+        "sampler_name": "dpmpp_2m_sde",
+        "scheduler": "karras",
+        "denoise": 1,
+        "preview_method": "auto",
+        "vae_decode": "true",
+        "model": [
+          "21",
+          0
+        ],
+        "positive": [
+          "3",
+          0
+        ],
+        "negative": [
+          "4",
+          0
+        ],
+        "latent_image": [
+          "6",
+          0
+        ],
+        "optional_vae": [
+          "9",
+          0
+        ]
+      },
+      "class_type": "KSampler (Efficient)",
+      "_meta": {
+        "title": "KSampler (Efficient)"
+      }
+    },
+    "21": {
+      "inputs": {
+        "lora_01": "Touch_of_Realism_SDXL_V2.safetensors",
+        "strength_01": 0.7,
+        "lora_02": "woman877-zimage.safetensors",
+        "strength_02": 0.7000000000000002,
+        "lora_03": "None",
+        "strength_03": 1,
+        "lora_04": "None",
+        "strength_04": 1,
+        "model": [
+          "1",
+          0
+        ],
+        "clip": [
+          "2",
+          0
+        ]
+      },
+      "class_type": "Lora Loader Stack (rgthree)",
+      "_meta": {
+        "title": "Lora Loader Stack (rgthree)"
+      }
+    },
+    "22": {
+      "inputs": {
+        "guide_size": 768,
+        "guide_size_for": true,
+        "max_size": 1024,
+        "seed": 479646270240348,
+        "steps": 20,
+        "cfg": 4,
+        "sampler_name": "dpmpp_2m_sde",
+        "scheduler": "karras",
+        "denoise": 0.5,
+        "feather": 5,
+        "noise_mask": true,
+        "force_inpaint": true,
+        "bbox_threshold": 0.5,
+        "bbox_dilation": 10,
+        "bbox_crop_factor": 3,
+        "sam_detection_hint": "center-1",
+        "sam_dilation": 0,
+        "sam_threshold": 0.93,
+        "sam_bbox_expansion": 0,
+        "sam_mask_hint_threshold": 0.7,
+        "sam_mask_hint_use_negative": "False",
+        "drop_size": 10,
+        "wildcard": "",
+        "cycle": 1,
+        "inpaint_model": false,
+        "noise_mask_feather": 20,
+        "tiled_encode": false,
+        "tiled_decode": false,
+        "image": [
+          "7",
+          0
+        ],
+        "model": [
+          "10",
+          0
+        ],
+        "clip": [
+          "21",
+          1
+        ],
+        "vae": [
+          "10",
+          4
+        ],
+        "positive": [
+          "10",
+          1
+        ],
+        "negative": [
+          "10",
+          2
+        ],
+        "bbox_detector": [
+          "23",
+          0
+        ]
+      },
+      "class_type": "FaceDetailer",
+      "_meta": {
+        "title": "FaceDetailer"
+      }
+    },
+    "23": {
+      "inputs": {
+        "model_name": "bbox/face_yolov8m.pt"
+      },
+      "class_type": "UltralyticsDetectorProvider",
+      "_meta": {
+        "title": "UltralyticsDetectorProvider"
+      }
+    },
+    "24": {
+      "inputs": {
+        "images": [
+          "22",
+          2
+        ]
+      },
+      "class_type": "PreviewImage",
+      "_meta": {
+        "title": "预览图像"
+      }
+    },
+    "25": {
+      "inputs": {
+        "guide_size": 768,
+        "guide_size_for": true,
+        "max_size": 1024,
+        "seed": 866473413898569,
+        "steps": 20,
+        "cfg": 4,
+        "sampler_name": "dpmpp_2m_sde",
+        "scheduler": "karras",
+        "denoise": 0.5,
+        "feather": 5,
+        "noise_mask": true,
+        "force_inpaint": true,
+        "bbox_threshold": 0.5,
+        "bbox_dilation": 10,
+        "bbox_crop_factor": 3,
+        "sam_detection_hint": "center-1",
+        "sam_dilation": 0,
+        "sam_threshold": 0.93,
+        "sam_bbox_expansion": 0,
+        "sam_mask_hint_threshold": 0.7,
+        "sam_mask_hint_use_negative": "False",
+        "drop_size": 10,
+        "wildcard": "",
+        "cycle": 1,
+        "inpaint_model": false,
+        "noise_mask_feather": 20,
+        "tiled_encode": false,
+        "tiled_decode": false,
+        "image": [
+          "22",
+          0
+        ],
+        "model": [
+          "10",
+          0
+        ],
+        "clip": [
+          "21",
+          1
+        ],
+        "vae": [
+          "10",
+          4
+        ],
+        "positive": [
+          "10",
+          1
+        ],
+        "negative": [
+          "10",
+          2
+        ],
+        "bbox_detector": [
+          "26",
+          0
+        ],
+        "sam_model_opt": [
+          "27",
+          0
+        ],
+        "segm_detector_opt": [
+          "26",
+          1
+        ]
+      },
+      "class_type": "FaceDetailer",
+      "_meta": {
+        "title": "FaceDetailer"
+      }
+    },
+    "26": {
+      "inputs": {
+        "model_name": "bbox/PitEyeDetailer-v2-seg.pt"
+      },
+      "class_type": "UltralyticsDetectorProvider",
+      "_meta": {
+        "title": "UltralyticsDetectorProvider"
+      }
+    },
+    "27": {
+      "inputs": {
+        "model_name": "sam_vit_b_01ec64.pth",
+        "device_mode": "AUTO"
+      },
+      "class_type": "SAMLoader",
+      "_meta": {
+        "title": "SAMLoader (Impact)"
+      }
+    },
+    "28": {
+      "inputs": {
+        "images": [
+          "25",
+          2
+        ]
+      },
+      "class_type": "PreviewImage",
+      "_meta": {
+        "title": "预览图像"
+      }
+    },
+    "33": {
+      "inputs": {
+        "model_name": "4x_foolhardy_Remacri.pth"
+      },
+      "class_type": "UpscaleModelLoader",
+      "_meta": {
+        "title": "加载放大模型"
+      }
+    },
+    "34": {
+      "inputs": {
+        "upscale_model": [
+          "33",
+          0
+        ],
+        "image": [
+          "25",
+          0
+        ]
+      },
+      "class_type": "ImageUpscaleWithModel",
+      "_meta": {
+        "title": "使用模型放大图像"
+      }
+    },
+    "35": {
+      "inputs": {
+        "images": [
+          "25",
+          0
+        ]
+      },
+      "class_type": "PreviewImage",
+      "_meta": {
+        "title": "预览图像"
+      }
+    },
+    "36": {
+      "inputs": {
+        "upscale_method": "lanczos",
+        "scale_by": 0.20000000000000004,
+        "image": [
+          "34",
+          0
+        ]
+      },
+      "class_type": "ImageScaleBy",
+      "_meta": {
+        "title": "缩放图像（比例）"
+      }
+    },
+    "47": {
+      "inputs": {
+        "lora_name": null,
+        "strength_model": 0.8,
+        "strength_clip": 1,
+        "prompt": "",
+        "example": ""
+      },
+      "class_type": "LoraLoader|pysssss",
+      "_meta": {
+        "title": "Lora Loader 🐍"
+      }
+    }
+  }
+
+
