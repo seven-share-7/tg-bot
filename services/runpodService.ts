@@ -22,6 +22,13 @@ interface RunPodConfig {
 type JobStatus = 'IN_QUEUE' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED';
 
 /**
+ * RunPod 提交任务响应
+ */
+interface RunPodJobResponse {
+  id: string;
+}
+
+/**
  * RunPod 任务结果
  */
 interface RunPodResult {
@@ -72,7 +79,7 @@ async function submitJob(config: RunPodConfig, workflow: any): Promise<string> {
       throw new Error(`RunPod API 错误: ${response.status} - ${errorText}`);
     }
     
-    const data = await response.json();
+    const data = await response.json() as RunPodJobResponse;
     const jobId = data.id;
     
     if (!jobId) {
