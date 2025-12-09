@@ -79,19 +79,43 @@ export async function initDatabase(d1?: D1Database): Promise<void> {
       console.log('检测到 D1 数据库绑定，使用 D1 Adapter');
       globalObj.d1Database = d1;
 
-      // 动态导入 Prisma 模块，避免在模块加载时实例化
-      const { PrismaClient } = await import('@prisma/client');
+      // 先创建 adapter，再动态导入 Prisma Client
+      // 这样可以确保 adapter 在 Prisma Client 检查环境之前就已经准备好
       const { PrismaD1 } = await import('@prisma/adapter-d1');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const adapter = new PrismaD1(d1) as any;
+      
+      // 动态导入 Prisma 模块，避免在模块加载时实例化
+      // 使用 try-catch 包装，以便在导入失败时提供更好的错误信息
+      let PrismaClient: any;
+      try {
+        const prismaModule = await import('@prisma/client');
+        PrismaClient = prismaModule.PrismaClient;
+      } catch (importError) {
+        console.error('导入 Prisma Client 失败:', importError);
+        throw new Error(`无法导入 Prisma Client: ${importError instanceof Error ? importError.message : '未知错误'}`);
+      }
 
       // 在 Workers 环境中，每次调用都重新创建实例
       // 因为 ctx.waitUntil 中的代码可能在不同的执行上下文中运行
-      const adapter = new PrismaD1(d1);
-      // 动态创建 PrismaClient 实例，避免类型检查问题
-      const PrismaClientConstructor = PrismaClient as new (options?: any) => any;
-      prisma = new PrismaClientConstructor({
-        adapter,
-        log: ['error', 'warn'],
-      });
+      // 直接使用 adapter 创建 PrismaClient，这样 Prisma 会识别 adapter 并允许在 Workers 环境中运行
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        prisma = new PrismaClient({
+          adapter,
+          log: ['error', 'warn'],
+        }) as any;
+        console.log('PrismaClient 创建成功（使用 D1 Adapter）');
+      } catch (createError) {
+        console.error('创建 PrismaClient 失败:', createError);
+        // 如果直接创建失败，尝试使用类型断言
+        const PrismaClientConstructor = PrismaClient as new (options?: any) => any;
+        prisma = new PrismaClientConstructor({
+          adapter,
+          log: ['error', 'warn'],
+        });
+        console.log('PrismaClient 创建成功（使用类型断言）');
+      }
 
       // 缓存实例（虽然可能不会在跨上下文共享，但保留以便调试）
       globalObj.prisma = prisma;
