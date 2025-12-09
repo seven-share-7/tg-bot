@@ -4,7 +4,7 @@
  * @author seven
  * @since 2024
  */
-import { prisma } from '@/lib/prisma';
+import { getPrisma } from '@/lib/prisma';
 import logger from '@/lib/logger';
 import { getUserByTelegramId, getUserByReferralCode, addPoints } from '@/services/userService';
 
@@ -82,6 +82,7 @@ export async function processReferral(
     
     if (latestReferrer.lastReferralBonusDate !== today) {
       // 新的一天，重置每日积分
+      const prisma = getPrisma();
       await prisma.user.update({
         where: { id: latestReferrer.id },
         data: {
@@ -113,6 +114,7 @@ export async function processReferral(
     await addPoints(currentReferrer, bonusPoints, `推广奖励 - 用户${newUserId}`);
     
     // 更新每日推广积分
+    const prisma = getPrisma();
     await prisma.user.update({
       where: { id: currentReferrer.id },
       data: {

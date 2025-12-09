@@ -18,7 +18,29 @@ declare global {
  * 在 Cloudflare Workers 环境中使用 D1 Adapter
  * 在本地开发环境中使用标准 SQLite 连接
  */
-export let prisma: PrismaClient | any;
+let prisma: PrismaClient | any;
+
+/**
+ * 获取 Prisma 客户端实例
+ * 确保在使用前已经初始化
+ * 
+ * @return {PrismaClient} Prisma 客户端实例
+ * @throws {Error} 如果 prisma 未初始化
+ * @author seven
+ * @since 2025-11-28
+ */
+export function getPrisma(): PrismaClient {
+  if (!prisma) {
+    throw new Error('Prisma Client 未初始化。请先调用 initDatabase() 函数。');
+  }
+  return prisma;
+}
+
+/**
+ * 导出 prisma 变量（向后兼容）
+ * 注意：使用此导出时，请确保已调用 initDatabase()
+ */
+export { prisma };
 
 /**
  * 获取全局对象（兼容 Node.js 和 Cloudflare Workers）
@@ -87,10 +109,9 @@ export async function initDatabase(d1?: D1Database): Promise<void> {
       
       // 缓存实例
       globalObj.prisma = prisma;
-    
-    // 测试数据库连接
-    // 注意：在 Cloudflare Workers 环境中使用 D1 Adapter 时，不需要调用 $connect()
-    if (!d1) {
+      
+      // 测试数据库连接
+      // 注意：在 Cloudflare Workers 环境中使用 D1 Adapter 时，不需要调用 $connect()
       // 本地环境：需要连接
       try {
         await prisma.$connect();

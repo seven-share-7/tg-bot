@@ -5,7 +5,7 @@
  * @since 2024
  */
 import { PrismaClient, User } from '@prisma/client';
-import { prisma } from '@/lib/prisma';
+import { getPrisma } from '@/lib/prisma';
 import logger from '@/lib/logger';
 import { generateReferralCode, getUserLevel } from '@/lib/helpers';
 
@@ -28,6 +28,9 @@ export async function getOrCreateUser(
 ): Promise<User> {
   try {
     logger.info(`获取或创建用户 - Telegram ID: ${telegramId}, Username: ${username}`);
+    
+    // 获取 Prisma 客户端实例
+    const prisma = getPrisma();
     
     // 查询用户
     let user = await prisma.user.findUnique({
@@ -82,6 +85,7 @@ export async function getOrCreateUser(
 export async function getUserByTelegramId(telegramId: bigint): Promise<User | null> {
   try {
     logger.debug(`查询用户 - Telegram ID: ${telegramId}`);
+    const prisma = getPrisma();
     const user = await prisma.user.findUnique({
       where: { telegramId },
     });
@@ -103,6 +107,7 @@ export async function getUserByTelegramId(telegramId: bigint): Promise<User | nu
 export async function getUserByReferralCode(referralCode: string): Promise<User | null> {
   try {
     logger.debug(`根据推广码查询用户 - 推广码: ${referralCode}`);
+    const prisma = getPrisma();
     const user = await prisma.user.findUnique({
       where: { referralCode },
     });
@@ -127,6 +132,7 @@ export async function addPoints(user: User, amount: number, reason?: string): Pr
   try {
     logger.info(`给用户增加积分 - 用户ID: ${user.telegramId}, 积分: ${amount}, 原因: ${reason}`);
     
+    const prisma = getPrisma();
     const newPoints = user.points + amount;
     const newLevel = getUserLevel(newPoints);
     
@@ -164,6 +170,7 @@ export async function deductPoints(user: User, amount: number): Promise<boolean>
       return false;
     }
     
+    const prisma = getPrisma();
     const newPoints = user.points - amount;
     const newLevel = getUserLevel(newPoints);
     

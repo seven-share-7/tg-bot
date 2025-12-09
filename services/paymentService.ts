@@ -5,7 +5,7 @@
  * @since 2024
  */
 import { Payment } from '@prisma/client';
-import { prisma } from '@/lib/prisma';
+import { getPrisma } from '@/lib/prisma';
 import logger from '@/lib/logger';
 import { generateOrderNo } from '@/lib/helpers';
 import { PaymentMethod, PaymentStatus } from '@/lib/constants';
@@ -42,6 +42,7 @@ export async function createPayment(
       throw new Error(`无效的套餐key: ${packageKey}`);
     }
     
+    const prisma = getPrisma();
     const packageInfo = POINTS_PACKAGES[packageKey];
     const orderNo = generateOrderNo();
     
@@ -75,6 +76,7 @@ export async function createPayment(
 export async function getPaymentByNo(orderNo: string): Promise<Payment | null> {
   try {
     logger.debug(`查询支付订单 - 订单号: ${orderNo}`);
+    const prisma = getPrisma();
     const payment = await prisma.payment.findUnique({
       where: { orderNo },
     });
@@ -98,6 +100,7 @@ export async function updatePaymentUrl(payment: Payment, paymentUrl: string): Pr
   try {
     logger.info(`更新支付链接 - 订单号: ${payment.orderNo}, URL: ${paymentUrl}`);
     
+    const prisma = getPrisma();
     const updatedPayment = await prisma.payment.update({
       where: { id: payment.id },
       data: { paymentUrl },
@@ -124,6 +127,7 @@ export async function completePayment(payment: Payment, paidAt?: string): Promis
   try {
     logger.info(`完成支付 - 订单号: ${payment.orderNo}`);
     
+    const prisma = getPrisma();
     const paidAtTime = paidAt || new Date().toISOString();
     
     const updatedPayment = await prisma.payment.update({

@@ -5,7 +5,7 @@
  * @since 2024
  */
 import { Order } from '@prisma/client';
-import { prisma } from '@/lib/prisma';
+import { getPrisma } from '@/lib/prisma';
 import logger from '@/lib/logger';
 import { generateOrderNo } from '@/lib/helpers';
 import { OrderType, OrderStatus } from '@/lib/constants';
@@ -28,6 +28,7 @@ export async function createOrder(
   try {
     logger.info(`创建订单 - 用户ID: ${userId}, 订单类型: ${orderType}, 消耗积分: ${pointsCost}`);
     
+    const prisma = getPrisma();
     const orderNo = generateOrderNo();
     const order = await prisma.order.create({
       data: {
@@ -58,6 +59,7 @@ export async function createOrder(
 export async function getOrderByNo(orderNo: string): Promise<Order | null> {
   try {
     logger.debug(`查询订单 - 订单号: ${orderNo}`);
+    const prisma = getPrisma();
     const order = await prisma.order.findUnique({
       where: { orderNo },
     });
@@ -90,6 +92,7 @@ export async function updateOrderStatus(
   try {
     logger.info(`更新订单状态 - 订单号: ${order.orderNo}, 新状态: ${status}`);
     
+    const prisma = getPrisma();
     const updatedOrder = await prisma.order.update({
       where: { id: order.id },
       data: {
