@@ -4,7 +4,7 @@
  * @author seven
  * @since 2024
  */
-import { Order } from '@prisma/client';
+import type { Order } from '@prisma/client';
 import { getPrisma } from '@/lib/prisma';
 import logger from '@/lib/logger';
 import { generateOrderNo } from '@/lib/helpers';

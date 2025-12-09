@@ -4,7 +4,7 @@
  * @author seven
  * @since 2024
  */
-import { Payment } from '@prisma/client';
+import type { Payment } from '@prisma/client';
 import logger from '@/lib/logger';
 import { PaymentMethod } from '@/lib/constants';
 

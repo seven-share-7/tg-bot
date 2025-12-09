@@ -4,7 +4,7 @@
  * @author seven
  * @since 2024
  */
-import { PrismaClient, User } from '@prisma/client';
+import type { User } from '@prisma/client';
 import { getPrisma } from '@/lib/prisma';
 import logger from '@/lib/logger';
 import { generateReferralCode, getUserLevel } from '@/lib/helpers';

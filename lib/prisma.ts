@@ -6,8 +6,6 @@
  */
 // 使用动态导入避免在模块加载时实例化 PrismaClient
 // 这在 Cloudflare Workers 环境中很重要
-type PrismaClientType = typeof import('@prisma/client').PrismaClient;
-type PrismaD1Type = typeof import('@prisma/adapter-d1').PrismaD1;
 
 // 全局类型定义，支持 D1 数据库绑定
 declare global {
@@ -20,7 +18,8 @@ declare global {
  * 在 Cloudflare Workers 环境中使用 D1 Adapter
  * 在本地开发环境中使用标准 SQLite 连接
  */
-let prisma: any;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let prisma: any = null;
 
 /**
  * 获取 Prisma 客户端实例
@@ -86,9 +85,9 @@ export async function initDatabase(d1?: D1Database): Promise<void> {
       // 在 Workers 环境中，每次调用都重新创建实例
       // 因为 ctx.waitUntil 中的代码可能在不同的执行上下文中运行
       const adapter = new PrismaD1(d1);
-      // @ts-ignore - PrismaClient with adapter type compatibility
-      prisma = new PrismaClient({
-        // @ts-ignore
+      // 动态创建 PrismaClient 实例，避免类型检查问题
+      const PrismaClientConstructor = PrismaClient as new (options?: any) => any;
+      prisma = new PrismaClientConstructor({
         adapter,
         log: ['error', 'warn'],
       });
