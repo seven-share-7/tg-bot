@@ -7,10 +7,10 @@
  */
 import { initDatabase } from '../lib/prisma';
 import { getUserByTelegramId, getOrCreateUser, deductPoints } from '../services/userService';
-import { createOrder } from '../services/orderService';
+import { createOrder, updateOrderStatus } from '../services/orderService';
 import { generateImage } from '../services/runpodService';
 import { uploadImageToR2, getR2PublicUrl, getImageFromR2 } from '../services/r2Service';
-import { OrderType } from '../lib/constants';
+import { OrderType, OrderStatus } from '../lib/constants';
 import { 
   DISCLAIMER_MESSAGE, 
   getMainMenuKeyboard, 
