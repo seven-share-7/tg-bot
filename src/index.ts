@@ -6,7 +6,7 @@
  * @since 2025-11-28
  */
 import { initDatabase } from '../lib/prisma';
-import { getUserByTelegramId, deductPoints } from '../services/userService';
+import { getUserByTelegramId, getOrCreateUser, deductPoints } from '../services/userService';
 import { createOrder } from '../services/orderService';
 import { generateImage } from '../services/runpodService';
 import { uploadImageToR2, getR2PublicUrl, getImageFromR2 } from '../services/r2Service';
@@ -275,6 +275,26 @@ async function handleTelegramUpdate(bot: TelegramBot, update: any, env: Env): Pr
       // 处理 /start 命令
       if (msg.text?.startsWith('/start')) {
         console.log('处理 /start 命令');
+        
+        if (!userId) {
+          await bot.sendMessage(chatId, '无法获取用户信息，请重试。');
+          return;
+        }
+        
+        // 获取或创建用户
+        try {
+          const user = msg.from;
+          await getOrCreateUser(
+            BigInt(userId),
+            user?.username || undefined,
+            user?.first_name || undefined,
+            user?.last_name || undefined
+          );
+          console.log(`用户已注册/更新 - 用户ID: ${userId}`);
+        } catch (error) {
+          console.error(`创建/获取用户失败 - 用户ID: ${userId}, 错误: ${error}`);
+          // 即使创建用户失败，也继续发送菜单
+        }
         
         // 获取环境变量中的官方频道ID
         const officialChannelId = env.OFFICIAL_CHANNEL_ID || '';
@@ -933,44 +953,55 @@ async function handleTelegramUpdate(bot: TelegramBot, update: any, env: Env): Pr
             const pointsRequired = 5;
             
             // 获取用户信息
-            const dbUser = await getUserByTelegramId(BigInt(userId));
-            if (!dbUser) {
-              await bot.answerCallbackQuery(query.id, { text: '请先使用 /start 命令开始使用机器人。' });
-              return;
-            }
-            
-            // 检查积分
-            if (dbUser.points < pointsRequired) {
-      await bot.answerCallbackQuery(query.id, {
-                text: `你的积分不足。当前积分：${dbUser.points}，需要积分：${pointsRequired}，请先获取足够积分`,
-                show_alert: true 
-              });
-              return;
-            }
-            
-            // 检查是否关注官方频道
-            const channelId = env.OFFICIAL_CHANNEL_ID || '';
-            if (channelId) {
-              try {
-                const member = await bot.getChatMember(channelId, userId);
-                const isSubscribed = ['member', 'administrator', 'creator'].includes(member.status);
-                if (!isSubscribed) {
-                  await bot.answerCallbackQuery(query.id, { 
-                    text: `请先关注官方频道才能使用此功能！\n官方频道：${channelId}`,
-                    show_alert: true 
-                  });
-                  return;
-                }
-              } catch (error) {
-                console.error(`检查频道关注状态失败: ${error}`);
+            try {
+              console.log(`查询用户信息 - 用户ID: ${userId}, Telegram ID: ${userId}`);
+              const dbUser = await getUserByTelegramId(BigInt(userId));
+              if (!dbUser) {
+                console.warn(`用户不存在 - 用户ID: ${userId}`);
+                await bot.answerCallbackQuery(query.id, { text: '请先使用 /start 命令开始使用机器人。', show_alert: true });
+                return;
               }
-            }
+              
+              console.log(`用户信息查询成功 - 用户ID: ${userId}, 积分: ${dbUser.points}`);
             
-            // 积分和频道检查通过，提示用户输入文本提示词
-            await bot.answerCallbackQuery(query.id, { text: '请输入图片描述' });
-            
-            // 发送清晰的提示信息
-            const promptText = `✨ 文生图功能
+              // 检查积分
+              if (dbUser.points < pointsRequired) {
+                console.warn(`用户积分不足 - 用户ID: ${userId}, 当前积分: ${dbUser.points}, 需要积分: ${pointsRequired}`);
+                await bot.answerCallbackQuery(query.id, {
+                  text: `你的积分不足。当前积分：${dbUser.points}，需要积分：${pointsRequired}，请先获取足够积分`,
+                  show_alert: true 
+                });
+                return;
+              }
+              
+              // 检查是否关注官方频道
+              const channelId = env.OFFICIAL_CHANNEL_ID || '';
+              if (channelId) {
+                try {
+                  console.log(`检查频道关注状态 - 用户ID: ${userId}, 频道ID: ${channelId}`);
+                  const member = await bot.getChatMember(channelId, userId);
+                  const isSubscribed = ['member', 'administrator', 'creator'].includes(member.status);
+                  if (!isSubscribed) {
+                    console.warn(`用户未关注频道 - 用户ID: ${userId}, 频道ID: ${channelId}`);
+                    await bot.answerCallbackQuery(query.id, { 
+                      text: `请先关注官方频道才能使用此功能！\n官方频道：${channelId}`,
+                      show_alert: true 
+                    });
+                    return;
+                  }
+                  console.log(`频道关注检查通过 - 用户ID: ${userId}`);
+                } catch (error) {
+                  console.error(`检查频道关注状态失败 - 用户ID: ${userId}, 错误: ${error}`);
+                  // 如果检查失败，继续执行（不阻塞）
+                }
+              }
+              
+              // 积分和频道检查通过，提示用户输入文本提示词
+              console.log(`所有检查通过，提示用户输入 - 用户ID: ${userId}`);
+              await bot.answerCallbackQuery(query.id, { text: '✅ 请在下一条消息中输入图片描述' });
+              
+              // 发送清晰的提示信息
+              const promptText = `✨ 文生图功能
 
 ✅ 检查通过，您可以开始输入图片描述了！
 
@@ -988,9 +1019,18 @@ async function handleTelegramUpdate(bot: TelegramBot, update: any, env: Env): Pr
 • 处理完成后会自动扣除积分
 
 ⏳ 我正在等待您的图片描述...`;
-            
-            await bot.sendMessage(chatId, promptText);
-            return;
+              
+              await bot.sendMessage(chatId, promptText);
+              console.log(`文生图提示信息已发送 - 用户ID: ${userId}`);
+              return;
+            } catch (error) {
+              console.error(`处理文生图回调失败 - 用户ID: ${userId}, 错误: ${error}`);
+              await bot.answerCallbackQuery(query.id, { 
+                text: '处理请求时发生错误，请稍后重试。', 
+                show_alert: true 
+              });
+              return;
+            }
           }
           
           // 处理图片/视频上传
