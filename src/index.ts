@@ -82,6 +82,7 @@ export interface Env {
   // RunPod 配置
   RUNPOD_API_KEY?: string;
   RUNPOD_ENDPOINT_ID?: string;
+  ENDPOINT_ID?: string; // 兼容旧名称
   
   // R2 配置
   R2_PUBLIC_URL?: string; // R2 公共访问 URL（如果配置了自定义域名）
@@ -476,11 +477,16 @@ async function handleTelegramUpdate(bot: TelegramBot, update: any, env: Env): Pr
               console.log(`RUNPOD_API_KEY 是否存在: ${!!env.RUNPOD_API_KEY}`);
               console.log(`RUNPOD_API_KEY 长度: ${env.RUNPOD_API_KEY?.length || 0}`);
               console.log(`RUNPOD_ENDPOINT_ID 是否存在: ${!!env.RUNPOD_ENDPOINT_ID}`);
+              console.log(`ENDPOINT_ID 是否存在: ${!!env.ENDPOINT_ID}`);
               console.log(`RUNPOD_ENDPOINT_ID 值: ${env.RUNPOD_ENDPOINT_ID || '(未设置)'}`);
+              console.log(`ENDPOINT_ID 值: ${env.ENDPOINT_ID || '(未设置)'}`);
+              
+              // 兼容两种命名方式：RUNPOD_ENDPOINT_ID 或 ENDPOINT_ID
+              const endpointId = env.RUNPOD_ENDPOINT_ID || env.ENDPOINT_ID || '';
               
               const runpodConfig = {
                 apiKey: env.RUNPOD_API_KEY || '',
-                endpointId: env.RUNPOD_ENDPOINT_ID || '',
+                endpointId: endpointId,
               };
               
               if (!runpodConfig.apiKey || !runpodConfig.endpointId) {
