@@ -398,10 +398,10 @@ async function handleTelegramUpdate(bot: TelegramBot, update: any, env: Env): Pr
         }
         
         // 检查是否是文生图模式（简单判断：如果用户发送的文本不是命令，且长度合理，可能是提示词）
-        // 这里简化处理：如果文本长度大于5且不是命令，就认为是文生图提示词
+        // 这里简化处理：如果文本长度大于等于2且小于500，就认为是文生图提示词
         // 实际应该使用状态管理来跟踪用户是否处于文生图模式
         const text = msg.text.trim();
-        if (text.length > 5 && text.length < 500) {
+        if (text.length >= 2 && text.length < 500) {
           // 尝试作为文生图提示词处理
           try {
             if (!userId) {
@@ -409,11 +409,18 @@ async function handleTelegramUpdate(bot: TelegramBot, update: any, env: Env): Pr
               return;
             }
             
-            // 获取用户信息
-            const dbUser = await getUserByTelegramId(BigInt(userId));
+            // 获取或创建用户信息（如果用户不存在，自动创建）
+            const user = msg.from;
+            let dbUser = await getUserByTelegramId(BigInt(userId));
             if (!dbUser) {
-              await bot.sendMessage(chatId, '请先使用 /start 命令开始使用机器人。');
-              return;
+              console.log(`用户不存在，自动创建用户 - 用户ID: ${userId}`);
+              dbUser = await getOrCreateUser(
+                BigInt(userId),
+                user?.username || undefined,
+                user?.first_name || undefined,
+                user?.last_name || undefined
+              );
+              console.log(`用户创建成功 - 用户ID: ${userId}, 积分: ${dbUser.points}`);
             }
             
             // 检查是否关注官方频道
@@ -952,22 +959,28 @@ async function handleTelegramUpdate(bot: TelegramBot, update: any, env: Env): Pr
             const featureType = parts[1]; // strip, breast, etc.
             const pointsRequired = 5;
             
-            // 获取用户信息
+            // 获取或创建用户信息（如果用户不存在，自动创建）
             try {
               console.log(`查询用户信息 - 用户ID: ${userId}, Telegram ID: ${userId}`);
-              const dbUser = await getUserByTelegramId(BigInt(userId));
+              const user = query.from;
+              let dbUser = await getUserByTelegramId(BigInt(userId));
               if (!dbUser) {
-                console.warn(`用户不存在 - 用户ID: ${userId}`);
-                await bot.answerCallbackQuery(query.id, { text: '请先使用 /start 命令开始使用机器人。', show_alert: true });
-                return;
+                console.log(`用户不存在，自动创建用户 - 用户ID: ${userId}`);
+                dbUser = await getOrCreateUser(
+                  BigInt(userId),
+                  user?.username || undefined,
+                  user?.first_name || undefined,
+                  user?.last_name || undefined
+                );
+                console.log(`用户创建成功 - 用户ID: ${userId}, 积分: ${dbUser.points}`);
+              } else {
+                console.log(`用户信息查询成功 - 用户ID: ${userId}, 积分: ${dbUser.points}`);
               }
-              
-              console.log(`用户信息查询成功 - 用户ID: ${userId}, 积分: ${dbUser.points}`);
             
               // 检查积分
               if (dbUser.points < pointsRequired) {
                 console.warn(`用户积分不足 - 用户ID: ${userId}, 当前积分: ${dbUser.points}, 需要积分: ${pointsRequired}`);
-                await bot.answerCallbackQuery(query.id, {
+      await bot.answerCallbackQuery(query.id, {
                   text: `你的积分不足。当前积分：${dbUser.points}，需要积分：${pointsRequired}，请先获取足够积分`,
                   show_alert: true 
                 });
