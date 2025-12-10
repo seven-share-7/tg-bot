@@ -8,7 +8,7 @@
 import { initDatabase } from '../lib/prisma';
 import { getUserByTelegramId, getOrCreateUser, deductPoints } from '../services/userService';
 import { createOrder, updateOrderStatus } from '../services/orderService';
-import { generateImage } from '../services/runpodService';
+import { generateImage, submitImageGeneration, checkJobStatus, extractImagesFromResult } from '../services/runpodService';
 import { uploadImageToR2, getR2PublicUrl, getImageFromR2 } from '../services/r2Service';
 import { OrderType, OrderStatus } from '../lib/constants';
 import { 
@@ -498,12 +498,168 @@ async function handleTelegramUpdate(bot: TelegramBot, update: any, env: Env): Pr
               
               console.log('RunPod API 配置检查通过');
               
-              console.log(`调用 RunPod API 生成图片 - 提示词: ${text}`);
-              const imageBuffers = await generateImage(runpodConfig, text);
+              console.log(`提交 RunPod 图片生成任务 - 提示词: ${text}`);
               
-              if (imageBuffers.length === 0) {
-                throw new Error('图片生成失败，未返回图片数据');
-              }
+              // 提交任务（不等待完成，避免 Worker 超时）
+              const jobId = await submitImageGeneration(runpodConfig, text);
+              console.log(`RunPod 任务已提交 - Job ID: ${jobId}, 订单号: ${order.orderNo}`);
+              
+              // 更新订单状态为 PROCESSING，并保存 jobId 到 errorMessage 字段（临时存储）
+              await updateOrderStatus(order, OrderStatus.PROCESSING, undefined, undefined, `JOB_ID:${jobId}`);
+              
+              // 通知用户任务已提交
+              await bot.sendMessage(
+                chatId,
+                `✅ 图片生成任务已提交\n订单号：${order.orderNo}\n提示词：${text}\n\n⏳ 正在生成图片，请稍候...\n\n系统会在生成完成后自动发送给您。`
+              );
+              
+              // 在后台异步处理任务（不阻塞响应）
+              // 使用较短的轮询时间，避免 Worker 超时
+              console.log(`开始后台处理 RunPod 任务 - Job ID: ${jobId}`);
+              
+              // 异步处理任务（不阻塞主响应）
+              (async () => {
+                try {
+                  // 轮询任务状态（最多等待 30 秒，每 2 秒检查一次）
+                  let attempts = 0;
+                  const maxAttempts = 15; // 15 * 2 = 30 秒
+                  
+                  while (attempts < maxAttempts) {
+                    await new Promise(resolve => setTimeout(resolve, 2000)); // 等待 2 秒
+                    attempts++;
+                    
+                    const result = await checkJobStatus(runpodConfig, jobId);
+                    console.log(`检查任务状态 - Job ID: ${jobId}, 状态: ${result.status}, 尝试次数: ${attempts}`);
+                    
+                    if (result.status === 'COMPLETED') {
+                      // 任务完成，提取图片
+                      const imageBuffers = extractImagesFromResult(result);
+                      
+                      if (imageBuffers.length === 0) {
+                        throw new Error('图片生成完成，但未返回图片数据');
+                      }
+                      
+                      // 配置 R2 存储
+                      const r2Config = {
+                        bucket: env.R2_STORAGE,
+                        prefix: 'tg-bot',
+                        publicUrl: env.R2_PUBLIC_URL,
+                      };
+                      
+                      // 上传图片到 R2 并发送
+                      for (let i = 0; i < imageBuffers.length; i++) {
+                        const imageBuffer = imageBuffers[i];
+                        
+                        try {
+                          // 生成文件名（包含订单号和索引）
+                          const filename = `order-${order.orderNo}-${i + 1}.png`;
+                          
+                          // 上传到 R2
+                          console.log(`上传图片到 R2 - 订单号: ${order.orderNo}, 图片 ${i + 1}/${imageBuffers.length}`);
+                          const r2Key = await uploadImageToR2(r2Config, imageBuffer, filename);
+                          console.log(`图片上传到 R2 成功 - Key: ${r2Key}`);
+                          
+                          // 获取 R2 公共 URL
+                          let imageUrl: string;
+                          try {
+                            imageUrl = getR2PublicUrl(r2Config, r2Key);
+                          } catch (urlError) {
+                            // 如果无法获取公共 URL，尝试从 R2 获取图片数据并直接发送
+                            console.warn(`无法获取 R2 公共 URL，尝试直接发送图片数据 - 错误: ${urlError}`);
+                            const imageData = await getImageFromR2(r2Config, r2Key);
+                            if (imageData) {
+                              const caption = i === 0 
+                                ? `✅ 图片生成成功！\n订单号：${order.orderNo}\n提示词：${text}\n已扣除积分：${pointsRequired}\n剩余积分：${dbUser.points - pointsRequired}`
+                                : '';
+                              await bot.sendPhotoBuffer(chatId, imageData, { caption });
+                              console.log(`图片发送成功（直接发送） - 订单号: ${order.orderNo}, 图片 ${i + 1}/${imageBuffers.length}`);
+                              continue;
+                            } else {
+                              throw new Error('无法从 R2 获取图片数据');
+                            }
+                          }
+                          
+                          // 使用 R2 URL 发送图片
+                          const caption = i === 0 
+                            ? `✅ 图片生成成功！\n订单号：${order.orderNo}\n提示词：${text}\n已扣除积分：${pointsRequired}\n剩余积分：${dbUser.points - pointsRequired}`
+                            : '';
+                          
+                          await bot.sendPhoto(chatId, imageUrl, { caption });
+                          console.log(`图片发送成功（使用 R2 URL） - 订单号: ${order.orderNo}, 图片 ${i + 1}/${imageBuffers.length}, URL: ${imageUrl}`);
+                        } catch (uploadError) {
+                          console.error(`上传图片到 R2 失败，尝试直接发送 - 订单号: ${order.orderNo}, 错误: ${uploadError}`);
+                          // 如果上传失败，尝试直接发送图片
+                          const caption = i === 0 
+                            ? `✅ 图片生成成功！\n订单号：${order.orderNo}\n提示词：${text}\n已扣除积分：${pointsRequired}\n剩余积分：${dbUser.points - pointsRequired}\n\n⚠️ 注意：图片未保存到存储，请及时保存。`
+                            : '';
+                          await bot.sendPhotoBuffer(chatId, imageBuffer, { caption });
+                          console.log(`图片发送成功（直接发送，未上传 R2） - 订单号: ${order.orderNo}, 图片 ${i + 1}/${imageBuffers.length}`);
+                        }
+                      }
+                      
+                      // 图片生成并发送成功，更新订单状态为 COMPLETED
+                      // 获取第一张图片的 URL（如果有）
+                      let firstImageUrl: string | undefined;
+                      try {
+                        const firstR2Key = `tg-bot/order-${order.orderNo}-1.png`;
+                        try {
+                          firstImageUrl = getR2PublicUrl(r2Config, firstR2Key);
+                        } catch {
+                          // 如果无法获取公共 URL，使用 R2 key 作为标识
+                          firstImageUrl = firstR2Key;
+                        }
+                      } catch {
+                        // 忽略错误，继续更新订单状态
+                      }
+                      
+                      await updateOrderStatus(order, OrderStatus.COMPLETED, firstImageUrl);
+                      console.log(`订单状态已更新为 COMPLETED - 订单号: ${order.orderNo}`);
+                      
+                      console.log(`文生图处理完成 - 订单号: ${order.orderNo}, 用户ID: ${userId}, 提示词: ${text}, 图片数量: ${imageBuffers.length}`);
+                      return; // 任务完成，退出循环
+                    } else if (result.status === 'FAILED') {
+                      // 任务失败
+                      const errorMessage = result.error || '任务失败，状态未知';
+                      await updateOrderStatus(order, OrderStatus.FAILED, undefined, undefined, errorMessage);
+                      console.log(`订单状态已更新为 FAILED - 订单号: ${order.orderNo}, 错误: ${errorMessage}`);
+                      
+                      await bot.sendMessage(
+                        chatId,
+                        `❌ 图片生成失败\n订单号：${order.orderNo}\n错误：${errorMessage}\n\n已扣除的积分将不会退回，请稍后重试或联系客服。`
+                      );
+                      return; // 任务失败，退出循环
+                    }
+                    // 如果状态是 IN_QUEUE 或 IN_PROGRESS，继续轮询
+                  }
+                  
+                  // 如果超过最大尝试次数，任务仍在处理中
+                  console.warn(`RunPod 任务处理超时 - Job ID: ${jobId}, 订单号: ${order.orderNo}, 已尝试: ${maxAttempts} 次`);
+                  await updateOrderStatus(order, OrderStatus.PROCESSING, undefined, undefined, `任务处理中，Job ID: ${jobId}`);
+                  await bot.sendMessage(
+                    chatId,
+                    `⏳ 图片生成任务仍在处理中\n订单号：${order.orderNo}\n提示词：${text}\n\n任务可能需要更长时间，请稍后查询订单状态。`
+                  );
+                } catch (error) {
+                  console.error(`后台处理 RunPod 任务失败 - Job ID: ${jobId}, 订单号: ${order.orderNo}, 错误: ${error}`);
+                  
+                  // 更新订单状态为 FAILED
+                  const errorMessage = error instanceof Error ? error.message : '未知错误';
+                  try {
+                    await updateOrderStatus(order, OrderStatus.FAILED, undefined, undefined, errorMessage);
+                    console.log(`订单状态已更新为 FAILED - 订单号: ${order.orderNo}, 错误: ${errorMessage}`);
+                  } catch (updateError) {
+                    console.error(`更新订单状态失败 - 订单号: ${order.orderNo}, 错误: ${updateError}`);
+                  }
+                  
+                  await bot.sendMessage(
+                    chatId,
+                    `❌ 图片生成失败\n订单号：${order.orderNo}\n错误：${errorMessage}\n\n已扣除的积分将不会退回，请稍后重试或联系客服。`
+                  );
+                }
+              })(); // 立即执行异步函数，不等待完成
+              
+              // 立即返回，不等待任务完成
+              return;
               
               // 配置 R2 存储
               const r2Config = {
