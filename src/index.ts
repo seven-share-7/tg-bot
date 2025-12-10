@@ -563,12 +563,40 @@ async function handleTelegramUpdate(bot: TelegramBot, update: any, env: Env): Pr
                 }
               }
               
+              // 图片生成并发送成功，更新订单状态为 COMPLETED
+              // 获取第一张图片的 URL（如果有）
+              let firstImageUrl: string | undefined;
+              try {
+                const firstR2Key = `tg-bot/order-${order.orderNo}-1.png`;
+                try {
+                  firstImageUrl = getR2PublicUrl(r2Config, firstR2Key);
+                } catch {
+                  // 如果无法获取公共 URL，使用 R2 key 作为标识
+                  firstImageUrl = firstR2Key;
+                }
+              } catch {
+                // 忽略错误，继续更新订单状态
+              }
+              
+              await updateOrderStatus(order, OrderStatus.COMPLETED, firstImageUrl);
+              console.log(`订单状态已更新为 COMPLETED - 订单号: ${order.orderNo}`);
+              
               console.log(`文生图处理完成 - 订单号: ${order.orderNo}, 用户ID: ${userId}, 提示词: ${text}, 图片数量: ${imageBuffers.length}`);
             } catch (error) {
               console.error(`调用 RunPod API 失败 - 订单号: ${order.orderNo}, 错误: ${error}`);
+              
+              // 图片生成失败，更新订单状态为 FAILED
+              const errorMessage = error instanceof Error ? error.message : '未知错误';
+              try {
+                await updateOrderStatus(order, OrderStatus.FAILED, undefined, undefined, errorMessage);
+                console.log(`订单状态已更新为 FAILED - 订单号: ${order.orderNo}, 错误: ${errorMessage}`);
+              } catch (updateError) {
+                console.error(`更新订单状态失败 - 订单号: ${order.orderNo}, 错误: ${updateError}`);
+              }
+              
               await bot.sendMessage(
                 chatId,
-                `❌ 图片生成失败\n订单号：${order.orderNo}\n错误：${error instanceof Error ? error.message : '未知错误'}\n\n已扣除的积分将不会退回，请稍后重试或联系客服。`
+                `❌ 图片生成失败\n订单号：${order.orderNo}\n错误：${errorMessage}\n\n已扣除的积分将不会退回，请稍后重试或联系客服。`
               );
             }
             
