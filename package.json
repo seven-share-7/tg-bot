@@ -16,6 +16,12 @@
     "db:d1-create": "wrangler d1 create tg-bot-db",
     "db:d1-migrate-local": "wrangler d1 execute tg-bot-db --local --file=./migrations/schema.sql",
     "db:d1-migrate-remote": "wrangler d1 execute tg-bot-db --remote --file=./migrations/schema.sql",
+    "update-points": "tsx scripts/update-user-points.ts",
+    "update-points-d1-local": "wrangler d1 execute tg-bot-db --local --file=./scripts/update-user-points-d1.sql",
+    "update-points-d1-remote": "wrangler d1 execute tg-bot-db --remote --file=./scripts/update-user-points-d1.sql",
+    "secrets:put-runpod-key": "wrangler secret put RUNPOD_API_KEY",
+    "secrets:put-runpod-endpoint": "wrangler secret put RUNPOD_ENDPOINT_ID",
+    "secrets:list": "wrangler secret list",
     "cf:login": "wrangler login",
     "cf:deploy": "wrangler deploy",
     "cf:tail": "wrangler tail"

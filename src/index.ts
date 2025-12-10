@@ -471,14 +471,26 @@ async function handleTelegramUpdate(bot: TelegramBot, update: any, env: Env): Pr
             
             // 调用 RunPod API 生成图片
             try {
+              // 调试：检查环境变量
+              console.log('检查 RunPod 环境变量配置...');
+              console.log(`RUNPOD_API_KEY 是否存在: ${!!env.RUNPOD_API_KEY}`);
+              console.log(`RUNPOD_API_KEY 长度: ${env.RUNPOD_API_KEY?.length || 0}`);
+              console.log(`RUNPOD_ENDPOINT_ID 是否存在: ${!!env.RUNPOD_ENDPOINT_ID}`);
+              console.log(`RUNPOD_ENDPOINT_ID 值: ${env.RUNPOD_ENDPOINT_ID || '(未设置)'}`);
+              
               const runpodConfig = {
                 apiKey: env.RUNPOD_API_KEY || '',
                 endpointId: env.RUNPOD_ENDPOINT_ID || '',
               };
               
               if (!runpodConfig.apiKey || !runpodConfig.endpointId) {
+                console.error('RunPod API 配置检查失败:');
+                console.error(`  - API Key 存在: ${!!runpodConfig.apiKey}, 长度: ${runpodConfig.apiKey.length}`);
+                console.error(`  - Endpoint ID 存在: ${!!runpodConfig.endpointId}, 值: ${runpodConfig.endpointId}`);
                 throw new Error('RunPod API 配置未设置，请在环境变量中配置 RUNPOD_API_KEY 和 RUNPOD_ENDPOINT_ID');
               }
+              
+              console.log('RunPod API 配置检查通过');
               
               console.log(`调用 RunPod API 生成图片 - 提示词: ${text}`);
               const imageBuffers = await generateImage(runpodConfig, text);
