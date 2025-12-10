@@ -660,8 +660,6 @@ async function handleTelegramUpdate(bot: TelegramBot, update: any, env: Env): Pr
               
               // 立即返回，不等待任务完成
               return;
-            
-            return;
           } catch (error) {
             console.error(`处理文生图提示词失败 - 用户ID: ${userId}, 错误: ${error}`);
             // 如果处理失败，继续普通文本处理
